@@ -1,0 +1,73 @@
+/*
+  Design tokens. Light theme only.
+
+  Colour names and values are the ones in the design plan. --white is the one addition:
+  the plan asks for white text on the blue bin, but gives it no token, and a raw #fff in a
+  component would sit outside this file.
+
+  scripts/check_contrast.py reads this file. Change a hex here and it re-checks every
+  text and background pairing the console uses.
+*/
+:root {
+  /* Colour */
+  --ground: #cfd6d8; /* cool concrete grey, page background */
+  --surface: #e6ebec; /* panels that hold lists and tables */
+  --ink: #14212b; /* primary text */
+  --ink-muted: #44535d; /* secondary text */
+  --bin-blue: #0b5cad; /* recyclable fill, white text on it */
+  --bin-charcoal: #2b3036; /* trash fill, --hivis numerals on it */
+  --hivis: #f2c100; /* trash numerals, new-row highlight, focus ring offset. Nothing else. */
+  --video-bed: #121a1f; /* behind the camera image only */
+  --white: #ffffff; /* text on the bin fills */
+
+  /* Spacing: one 8px unit. */
+  --space-unit: 8px;
+  --space-half: 4px;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-6: 48px;
+  --space-8: 64px;
+  --gutter: 24px;
+  --content-max: 1760px;
+
+  /* Radius by role, not one value for everything. */
+  --radius-camera: 6px;
+  --radius-bin: 0; /* they are bins */
+  --radius-lamp: 0; /* the link indicator is a square lamp, like the bins */
+  --radius-button: 4px;
+
+  /* Focus: a 2px ink ring, offset in safety yellow. */
+  --focus-ring-width: 2px;
+  --focus-ring-color: var(--ink);
+  --focus-ring-offset: var(--hivis);
+
+  /* Type: Archivo, variable, with the width axis. The wdth and wght values are set with
+     font-variation-settings in the component that uses them. */
+  --font-sans: var(--font-archivo), 'Archivo', system-ui, sans-serif;
+
+  --type-counter-wdth: 62;
+  --type-counter-wght: 800;
+  --type-counter-size: clamp(96px, 9vw, 176px);
+  --type-counter-leading: 0.9;
+  --type-counter-tracking: -0.01em;
+
+  --type-title-wdth: 100;
+  --type-title-wght: 650;
+  --type-title-size: 22px;
+
+  --type-body-wdth: 100;
+  --type-body-wght: 400;
+  --type-body-size: 16px;
+  --type-body-leading: 1.5;
+  --measure: 70ch;
+
+  /* Motion: one orchestrated moment when an item arrives. */
+  --motion-slide: 600ms;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-swap: 150ms;
+  --motion-row-fade: 1.2s;
+  --motion-badge: 2.5s;
+  --row-highlight: 35%; /* --hivis mix at the start of the row fade */
+}

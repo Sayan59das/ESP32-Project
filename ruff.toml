@@ -1,0 +1,2 @@
+# scripts/ follows the backend's ruff settings; backend/pyproject.toml is the one source.
+extend = "backend/pyproject.toml"

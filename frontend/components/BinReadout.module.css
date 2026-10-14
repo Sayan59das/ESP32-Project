@@ -1,0 +1,124 @@
+.readout {
+  width: var(--stage-size);
+}
+
+.bins {
+  position: relative;
+  display: flex;
+}
+
+.binsStale {
+  opacity: 0.5;
+}
+
+.recyclable {
+  flex: 0 0 50%;
+  min-width: 0;
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  border-radius: var(--radius-bin);
+  background: var(--bin-blue);
+  color: var(--white);
+  transition: flex-basis var(--motion-slide) var(--motion-ease);
+}
+
+.trash {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  border-radius: var(--radius-bin);
+  background: var(--bin-charcoal);
+  color: var(--white);
+}
+
+.title {
+  font-size: var(--type-title-size);
+  font-weight: var(--type-title-wght);
+  font-stretch: calc(var(--type-title-wdth) * 1%);
+  line-height: 1.25;
+}
+
+.numeral {
+  display: grid;
+  margin-top: var(--space-half);
+  font-size: var(--numeral-size);
+  font-weight: var(--type-counter-wght);
+  font-stretch: calc(var(--type-counter-wdth) * 1%);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--type-counter-leading);
+  letter-spacing: var(--type-counter-tracking);
+}
+
+.recyclableNumeral {
+  color: var(--white);
+}
+
+.trashNumeral {
+  color: var(--hivis);
+}
+
+.digits {
+  grid-area: 1 / 1;
+}
+
+.incoming {
+  animation: fade-in var(--motion-swap) linear both;
+}
+
+.outgoing {
+  animation: fade-out var(--motion-swap) linear both;
+}
+
+.share {
+  margin-top: var(--space-half);
+  font-variant-numeric: tabular-nums;
+}
+
+.trueRatio {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: var(--space-2);
+  margin-left: -1px;
+  background: var(--white);
+  transition: left var(--motion-slide) var(--motion-ease);
+}
+
+.footer {
+  padding-top: var(--space-1);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recyclable,
+  .trueRatio {
+    transition: none;
+  }
+
+  .incoming,
+  .outgoing {
+    animation: none;
+  }
+
+  .outgoing {
+    visibility: hidden;
+  }
+}

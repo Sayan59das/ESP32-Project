@@ -1,0 +1,64 @@
+.figure {
+  max-width: 480px;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  font-family: var(--font-sans);
+}
+
+.group {
+  fill: var(--surface);
+}
+
+.groupLabel {
+  fill: var(--ink-muted);
+  font-size: 14px;
+  font-weight: var(--type-title-wght);
+}
+
+.box {
+  fill: var(--ground);
+}
+
+.title {
+  fill: var(--ink);
+  font-size: 16px;
+  font-weight: var(--type-title-wght);
+}
+
+.text {
+  fill: var(--ink);
+  font-size: 14px;
+}
+
+.code {
+  fill: var(--ink);
+  font-size: 13px;
+  font-weight: var(--type-title-wght);
+  font-variant-numeric: tabular-nums;
+}
+
+.stroke {
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linecap: square;
+}
+
+.head {
+  fill: var(--ink);
+}
+
+.cable {
+  stroke: var(--ink);
+  stroke-width: 4;
+  stroke-linecap: square;
+}
+
+.caption {
+  max-width: var(--measure);
+  margin-top: var(--space-1);
+  color: var(--ink-muted);
+}

@@ -1,0 +1,150 @@
+.window {
+  width: var(--stage-size);
+  border-radius: var(--radius-camera) var(--radius-camera) 0 0;
+  background: var(--video-bed);
+  color: var(--surface);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-half) var(--space-2);
+  padding: var(--space-1) var(--space-2);
+}
+
+.title {
+  font-size: var(--type-title-size);
+  font-weight: var(--type-title-wght);
+  font-stretch: calc(var(--type-title-wdth) * 1%);
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.note {
+  flex: 1 0 100%;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.toggle {
+  display: flex;
+  gap: var(--space-half);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.option {
+  position: relative;
+  padding: var(--space-half) var(--space-1);
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.option:focus-within {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-width);
+  box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring-offset);
+}
+
+.optionOn {
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.radio {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--video-bed);
+}
+
+.feed {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.feedHidden {
+  visibility: hidden;
+}
+
+.message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  max-width: 34ch;
+  padding: var(--space-4);
+  background: var(--video-bed);
+}
+
+.tag {
+  position: absolute;
+  top: var(--space-1);
+  left: var(--space-1);
+  padding: var(--space-half) var(--space-1);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--type-title-wght);
+}
+
+/* Inset, so a band of the dark bed always separates it from the bins below. */
+.strip {
+  position: absolute;
+  right: var(--space-1);
+  bottom: var(--space-1);
+  left: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--type-title-size);
+  font-weight: var(--type-title-wght);
+  line-height: 1.25;
+}
+
+.stripRecyclable {
+  background: var(--bin-blue);
+  color: var(--white);
+}
+
+.stripTrash {
+  background: var(--bin-charcoal);
+  color: var(--white);
+}
+
+.stripUnsure {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.devicePicker {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+}
+
+.select {
+  padding: var(--space-half) var(--space-1);
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--surface);
+  color: var(--ink);
+}

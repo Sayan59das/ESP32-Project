@@ -1,0 +1,118 @@
+.main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--gutter) var(--space-8);
+}
+
+.h1 {
+  max-width: var(--measure);
+  font-size: 40px;
+  font-weight: var(--type-counter-wght);
+  font-stretch: calc(var(--type-counter-wdth) * 1%);
+  line-height: 1.1;
+}
+
+.problem {
+  max-width: var(--measure);
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--ink);
+  color: var(--ground);
+}
+
+/* Spacing inside a section comes from the gap, set once here. */
+.section {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  margin-top: var(--space-6);
+}
+
+.h2 {
+  font-size: var(--type-title-size);
+  font-weight: var(--type-title-wght);
+  font-stretch: calc(var(--type-title-wdth) * 1%);
+  line-height: 1.25;
+}
+
+.h3 {
+  margin-top: var(--space-1);
+  font-weight: var(--type-title-wght);
+}
+
+.prose {
+  max-width: var(--measure);
+}
+
+.note {
+  max-width: var(--measure);
+  color: var(--ink-muted);
+}
+
+.missing {
+  color: var(--ink-muted);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-1);
+  max-width: var(--measure);
+  margin: 0;
+  padding-left: var(--space-3);
+}
+
+.table {
+  width: 100%;
+  max-width: 640px;
+  font-variant-numeric: tabular-nums;
+}
+
+.matrix {
+  font-variant-numeric: tabular-nums;
+}
+
+.caption {
+  padding-bottom: var(--space-1);
+  color: var(--ink-muted);
+  text-align: left;
+}
+
+.head,
+.cell,
+.num,
+.diagonal {
+  padding: var(--space-1) var(--space-2) var(--space-1) 0;
+  border-top: 1px solid var(--surface);
+  text-align: left;
+  vertical-align: top;
+}
+
+.head {
+  font-weight: var(--type-title-wght);
+}
+
+.num {
+  text-align: right;
+}
+
+.diagonal {
+  padding-left: var(--space-1);
+  background: var(--surface);
+  font-weight: var(--type-counter-wght);
+  text-align: right;
+}
+
+.scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 640px) {
+  .main {
+    padding: var(--space-3) var(--space-2) var(--space-6);
+  }
+
+  .h1 {
+    font-size: 32px;
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "test_images_per_class": null,
+  "test_accuracy_per_class": null,
+  "overall_test_accuracy": null,
+  "latency_ms_p50": null,
+  "latency_ms_p95": null,
+  "ram_kb_peak": null,
+  "flash_kb": null,
+  "model_input": null,
+  "model_architecture": null,
+  "dataset_notes": null,
+  "confusion_matrix": null,
+  "ir_sensor": null,
+  "wiring": null,
+  "datasets": null,
+  "credits": null
+}

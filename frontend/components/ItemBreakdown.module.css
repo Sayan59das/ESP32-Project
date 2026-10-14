@@ -1,0 +1,45 @@
+.table {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.head,
+.headNumber {
+  padding: var(--space-half) 0;
+  color: var(--ink-muted);
+  font-weight: var(--type-body-wght);
+  text-align: left;
+}
+
+.headNumber {
+  padding-left: var(--space-2);
+  text-align: right;
+}
+
+.group {
+  padding: var(--space-2) 0 var(--space-half);
+  font-weight: var(--type-title-wght);
+  text-align: left;
+}
+
+.row {
+  border-top: 1px solid var(--ground);
+}
+
+.item {
+  padding: var(--space-1) 0;
+  font-weight: var(--type-body-wght);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.itemInner {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.number {
+  padding: var(--space-1) 0 var(--space-1) var(--space-2);
+  text-align: right;
+}

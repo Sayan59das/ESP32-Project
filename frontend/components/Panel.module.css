@@ -1,0 +1,53 @@
+/* Shared by the flat panels to the right of the stage. */
+
+.panel {
+  min-width: 0;
+  min-height: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: var(--space-2);
+  }
+}
+
+.title {
+  margin-bottom: var(--space-1);
+  font-size: var(--type-title-size);
+  font-weight: var(--type-title-wght);
+  font-stretch: calc(var(--type-title-wdth) * 1%);
+  line-height: 1.25;
+}
+
+.empty {
+  max-width: var(--measure);
+  color: var(--ink-muted);
+}
+
+.frameSlot {
+  flex: none;
+  background: var(--ground);
+}
+
+.frame {
+  flex: none;
+  image-rendering: pixelated;
+  background: var(--video-bed);
+}
+
+.bandRecyclable {
+  background: var(--bin-blue);
+  color: var(--white);
+}
+
+.bandTrash {
+  background: var(--bin-charcoal);
+  color: var(--white);
+}
+
+.bandUnsure {
+  background: var(--ground);
+  color: var(--ink);
+}

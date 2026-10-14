@@ -1,0 +1,35 @@
+.verdict {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.slot {
+  width: 96px;
+  height: 96px;
+}
+
+.details {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+
+.name {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  font-size: var(--type-title-size);
+  font-weight: var(--type-title-wght);
+  font-stretch: calc(var(--type-title-wdth) * 1%);
+  line-height: 1.25;
+}
+
+.band {
+  padding: var(--space-half) var(--space-1);
+  font-weight: var(--type-title-wght);
+}
+
+.meta {
+  font-variant-numeric: tabular-nums;
+}

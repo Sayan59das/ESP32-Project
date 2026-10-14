@@ -1,0 +1,95 @@
+/*
+  The stage (camera window plus bin readout) is one column whose width is --stage-size,
+  used by both so their edges always match. It snaps down to a multiple of 96px so the
+  enlarged 96x96 frame stays crisp: every source pixel becomes a whole number of screen
+  pixels. Browsers without CSS round() use the unsnapped value.
+*/
+.page {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+.main {
+  --stage-size: min(40vw, calc(100dvh - 25rem), 720px);
+  --numeral-size: min(var(--type-counter-size), calc(var(--stage-size) * 0.2));
+
+  display: grid;
+  grid-template-areas:
+    'stage last last'
+    'stage items recent';
+  grid-template-columns: var(--stage-size) minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--gutter);
+  align-items: start;
+  width: 100%;
+  max-width: var(--content-max);
+  min-height: 0;
+  margin: 0 auto;
+  padding: var(--space-2) var(--gutter);
+}
+
+@supports (width: round(down, 100px, 96px)) {
+  .main {
+    --stage-size: round(down, min(40vw, calc(100dvh - 25rem), 720px), 96px);
+  }
+}
+
+.stage {
+  grid-area: stage;
+}
+
+.last {
+  grid-area: last;
+}
+
+.items {
+  grid-area: items;
+  align-self: stretch;
+}
+
+.recent {
+  grid-area: recent;
+  align-self: stretch;
+}
+
+.run {
+  font-variant-numeric: tabular-nums;
+}
+
+.streamNote {
+  font-weight: var(--type-title-wght);
+}
+
+/* Desktop: the console is one screen and the log scrolls inside its own region. */
+@media (min-width: 1100px) {
+  .page {
+    height: 100dvh;
+  }
+}
+
+/* Narrower: one column, in reading order, the stage at full width. */
+@media (max-width: 1099px) {
+  .main {
+    --stage-size: 100%;
+    --numeral-size: clamp(48px, 15vw, 176px);
+
+    grid-template-areas:
+      'stage'
+      'last'
+      'items'
+      'recent';
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+
+  .recent {
+    max-height: 70vh;
+  }
+}
+
+@media (max-width: 640px) {
+  .main {
+    padding: var(--space-2);
+  }
+}
