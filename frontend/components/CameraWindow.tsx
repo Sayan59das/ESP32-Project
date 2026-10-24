@@ -156,6 +156,8 @@ const CHIP_ICONS: Record<CameraState, IconName> = {
   'not-responding': 'alert',
   unreachable: 'alert',
   'preview-paused': 'pause',
+  simulated: 'simulated',
+  replay: 'replay',
 };
 
 /** The message and next step for a camera state that stops the counting loop. */
@@ -238,6 +240,7 @@ export function CameraWindow({
     paused,
     link,
     linkLabel,
+    runSource,
     verdict,
     previewPaused,
     framesFlowing: !feedFailed && (link?.preview_fps ?? 0) > 0,

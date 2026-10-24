@@ -8,7 +8,6 @@ export const API_BASE = (process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8
 export const urls = {
   stream: `${API_BASE}/api/stream`,
   camera: `${API_BASE}/api/camera/stream`,
-  exportCsv: `${API_BASE}/api/export.csv`,
   frame: (eventId: number) => `${API_BASE}/api/events/${eventId}/frame.png`,
 };
 

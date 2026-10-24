@@ -20,7 +20,6 @@ const paths = {
   simulated: 'M9 3h6 M10 3v6l-5 11h14l-5-11V3', // a flask
   replay: 'M4 4v6h6 M5 15a8 8 0 1 0 1.8-8.2L4 10',
   // Actions and theme
-  download: 'M12 3v12 M7 10l5 5 5-5 M4 20h16',
   pause: 'M8 5v14 M16 5v14',
   play: 'M7 4l13 8-13 8z',
   plus: 'M12 5v14 M5 12h14',

@@ -54,6 +54,15 @@ are averaged until they settle, one verdict is produced, and nothing more is cou
 the view matches the background again. A low-confidence answer is counted as unsure, in
 neither bin.
 
+When the camera is off: a camera that is switched off, covered, dark or stuck still gives
+the model something to answer, so the camera bridge first checks that each frame is a live
+picture. Brightness under 20, contrast under 4 (every training frame is above 59 and 30) or
+ten identical frames in a row mean it is not. Such frames are never counted, the heartbeat
+stops so the console says "Camera not responding", and window 1 says
+`camera picture is dark or flat: not counting`. When the picture is back, or after 3 s
+without any frames, the bridge learns the empty view again, so keep the view empty for a few
+seconds after switching the camera on.
+
 The model runs without PyTorch (`Model/numpy_cnn.py` reads `waste_cnn.pt` and does the same
 arithmetic in numpy), so no torch install is needed to run the website. `python
 Model/camera_bridge.py --check` loads the model and classifies one training image.
@@ -74,7 +83,13 @@ make sim          # bridge on :8000 and console on :3000, simulated data
 ```
 
 Open http://localhost:3000. The header says **Simulated data**, and so does a tag on the
-camera window: simulated events and frames are never presented as real.
+camera window: simulated events and frames are never presented as real. The link badge says
+**Simulator**, not "Linked", and the camera window says "Simulated, no camera in use".
+
+The simulator makes up items on its own timer, so it keeps "detecting" whatever any camera
+is doing, including a camera that is off or unplugged. `SOURCE=sim` is the default in
+`.env.example`, which is why a plain `make dev` shows it. For real detections run
+`run_all.bat`, which sets `SOURCE=serial` and reads the camera.
 
 Open the console at `localhost`, not `127.0.0.1`: the bridge accepts the console's origin
 from `CORS_ORIGIN`, and the webcam needs a secure origin.

@@ -12,13 +12,10 @@
   gap: var(--space-1);
 }
 
-.note {
-  color: var(--ink-muted);
-  font-size: var(--text-sm);
-}
-
-.status > p {
-  margin-top: var(--space-1-5);
+/* The live region stays in the page when it is empty. Its grid gap would leave a blank line
+   under the button, so an empty one pulls itself back over it. */
+.status:empty {
+  margin-top: calc(-1 * var(--space-1-5));
 }
 
 .notice,

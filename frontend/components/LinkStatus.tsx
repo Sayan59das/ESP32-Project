@@ -12,6 +12,7 @@ import { Icon, type IconName } from './ui/Icon';
 
 const ICONS: Record<LinkKind, IconName> = {
   linked: 'signal',
+  simulated: 'simulated',
   reconnecting: 'waiting',
   connecting: 'waiting',
   'not-linked': 'alert',

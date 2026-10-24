@@ -3,14 +3,11 @@
 export const copy = {
   startNewRun: 'Start new run',
   confirmTitle: 'Start a new run?',
-  confirmBody:
-    'This resets the counts on screen. The current run stays saved and in the CSV export.',
+  confirmBody: 'This resets the counts on screen. The current run stays saved on this computer.',
   confirmKeep: 'Keep current run',
   newRunStarted: 'New run started.',
   newRunFailed:
     'The new run did not start: the classifier service did not answer. The current run continues.',
-  exportCsv: 'Export CSV',
-  exportNote: 'Every event of every run, with confidence and inference time.',
   emptyLastItem: 'No items sorted yet',
   emptyRecentTitle: 'Nothing in this run yet',
   emptyRecent: 'Sorted items will appear here, newest first.',
@@ -23,7 +20,7 @@ export const copy = {
   ],
   unavailable: 'Not available while the classifier service is unreachable.',
   noCounts: 'No counts',
-  logCap: (n: number) => `The latest ${n} items. Export CSV for the whole run.`,
+  logCap: (n: number) => `The latest ${n} items of this run.`,
   nothingSorted: 'Nothing sorted yet',
   sharesLater: 'Shares appear once an item is sorted.',
 
@@ -46,8 +43,19 @@ export const copy = {
     'not-responding': 'Camera not responding',
     unreachable: 'Service unreachable',
     'preview-paused': 'Preview paused',
+    simulated: 'Simulated, no camera in use',
+    replay: 'Replay, no camera in use',
     webcam: 'Webcam, not used by the classifier',
   },
+
+  // The simulator and a replay invent or replay items. The operator must never mistake them
+  // for a live camera: a camera that is off, unplugged or covered changes nothing there.
+  linkSimulated: 'Simulator',
+  linkReplay: 'Replay',
+  simulatorSentence:
+    'No camera is connected. The simulator makes up these items, so switching the camera on or off changes nothing. For real detections, run run_all.bat.',
+  replaySentence:
+    'No camera is connected. A recorded session is playing back, so switching the camera on or off changes nothing. For real detections, run run_all.bat.',
 
   // Pausing stops the picture on this screen only; the camera bridge keeps counting.
   pausePreview: 'Pause',
@@ -64,7 +72,7 @@ export const copy = {
   classifierNoFrames:
     "No frames are arriving. Check the camera board's USB cable and that the camera bridge window is running.",
   cameraNotResponding:
-    'The link is open but the camera has stopped answering. Check the camera bridge window; it reconnects by itself.',
+    'The link is open but the camera is not sending a usable picture: it may be off, covered, stuck or very dark. Counting is paused until it is back. Check the camera and the camera bridge window, then keep the view empty for a few seconds.',
   portBusy:
     'The camera link is not available. Start the camera bridge (run_all.bat does), and close the Arduino Serial Monitor and live.py: only one program can use the camera.',
   nanoNotLinked:

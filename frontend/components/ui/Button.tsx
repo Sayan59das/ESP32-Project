@@ -29,7 +29,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   );
 });
 
-/** Button styles for a link that looks like a button, such as Export CSV. */
+/** Button styles for a link that looks like a button, such as the links on the 404 page. */
 export function buttonClass(variant: Variant = 'secondary', size: Size = 'md'): string {
   return [styles.button, styles[variant], styles[size]].join(' ');
 }

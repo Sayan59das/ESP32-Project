@@ -69,7 +69,7 @@ identical; the contrast script fails if they drift.
 
 | Group      | Components                                                                                                                                                                                     |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Primitives | `Button` (primary, secondary, ghost), `Badge` (7 tones), `Card`, `Dialog` (native `<dialog>`), `Skeleton`, `EmptyState`, `Measured` / `NotMeasured`, `VisuallyHidden`, `Icon` (22 inline SVGs) |
+| Primitives | `Button` (primary, secondary, ghost), `Badge` (7 tones), `Card`, `Dialog` (native `<dialog>`), `Skeleton`, `EmptyState`, `Measured` / `NotMeasured`, `VisuallyHidden`, `Icon` (21 inline SVGs) |
 | Console    | `SiteHeader`, `ThemeToggle`, `CameraWindow`, `BinReadout`, `LastVerdict`, `ItemBreakdown`, `LinkStatus` (`LinkBadge`, `LinkPanel`), `RunControls`, `EventLog`, `ConnectionBanner`              |
 | Pages      | `Console` (the `/` page), `FlowDiagram` (`/project`), `ErrorScreen` (error and 404)                                                                                                            |
 | Logic      | `lib/reducer.ts` (the only state), `cameraState.ts`, `linkView.ts`, `connection.ts`, `announce.ts`, `format.ts`, `metrics.ts`, `copy.ts` (all user-facing wording)                             |
@@ -93,19 +93,19 @@ number.
 
 ## States
 
-| State                      | What the operator sees                                                                                         |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Loading                    | Still skeletons (no shimmer), `aria-busy`                                                                      |
-| Empty run                  | Last item shows the four steps: place, hold, counted or unsure, remove; "Nothing in this run yet" in the log   |
-| Counted / unsure           | Verdict strip over the held frame, camera chip, the count's 250 ms highlight, a new log row                    |
-| Live updates paused        | Banner with how long and "counts shown are the last received", counters desaturated, "Reconnecting" badge      |
-| Service unreachable        | Alert banner with the next step; tiles say "No counts" (no skeletons that never end)                           |
-| Not linked, not responding | Message over the camera with the fix (port busy, no board, heartbeat lost); alert link badge                   |
-| Board restarted            | Notice in the link panel; counts before and after are kept                                                     |
-| Preview paused             | The viewer's own pause: picture stops, counting and verdicts continue, "Preview paused" instead of "No frames" |
-| Simulated / replay         | Inverse badge in the header and on the camera, never hidden                                                    |
-| Not measured               | `NotMeasured`: the words in a dashed outline                                                                   |
-| Error, 404                 | `ErrorScreen` with "Try again" and "Reload the console"; `global-error` for a failed root layout               |
+| State                      | What the operator sees                                                                                                                                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Loading                    | Still skeletons (no shimmer), `aria-busy`                                                                                                                                                                   |
+| Empty run                  | Last item shows the four steps: place, hold, counted or unsure, remove; "Nothing in this run yet" in the log                                                                                                |
+| Counted / unsure           | Verdict strip over the held frame, camera chip, the count's 250 ms highlight, a new log row                                                                                                                 |
+| Live updates paused        | Banner with how long and "counts shown are the last received", counters desaturated, "Reconnecting" badge                                                                                                   |
+| Service unreachable        | Alert banner with the next step; tiles say "No counts" (no skeletons that never end)                                                                                                                        |
+| Not linked, not responding | Message over the camera with the fix (port busy, no board, heartbeat lost); alert link badge                                                                                                                |
+| Board restarted            | Notice in the link panel; counts before and after are kept                                                                                                                                                  |
+| Preview paused             | The viewer's own pause: picture stops, counting and verdicts continue, "Preview paused" instead of "No frames"                                                                                              |
+| Simulated / replay         | Inverse badge in the header and on the camera; the link badge says "Simulator" or "Replay", never "Linked", and the camera chip says "no camera in use". Generated items must never look like a live camera |
+| Not measured               | `NotMeasured`: the words in a dashed outline                                                                                                                                                                |
+| Error, 404                 | `ErrorScreen` with "Try again" and "Reload the console"; `global-error` for a failed root layout                                                                                                            |
 
 ## Accessibility
 

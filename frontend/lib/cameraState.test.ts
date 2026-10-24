@@ -36,6 +36,7 @@ const base: CameraInputs = {
   paused: false,
   link: link(),
   linkLabel: 'open',
+  runSource: 'serial',
   verdict: null,
   previewPaused: false,
   framesFlowing: true,
@@ -78,6 +79,27 @@ describe('cameraState', () => {
     expect(isFault(cameraState(paused))).toBe(false);
     expect(cameraState({ ...paused, verdict: event('recyclable') })).toBe('counted');
     expect(cameraState({ ...paused, linkLabel: 'stale' })).toBe('not-responding');
+  });
+
+  it('says there is no camera in use for generated items, and never invites placing one', () => {
+    const verdict = event('recyclable');
+    expect(cameraState({ ...base, runSource: 'sim' })).toBe('simulated');
+    expect(cameraState({ ...base, runSource: 'sim', verdict })).toBe('simulated');
+    expect(cameraState({ ...base, runSource: 'replay' })).toBe('replay');
+    // Even with the camera link "closed" or silent, which is true of any machine without one.
+    expect(cameraState({ ...base, runSource: 'sim', link: link({ source_open: false }) })).toBe(
+      'simulated',
+    );
+    expect(isFault('simulated')).toBe(false);
+    expect(isFault('replay')).toBe(false);
+  });
+
+  it('keeps the stream faults ahead of the simulator, and the viewer pause in front of it', () => {
+    expect(cameraState({ ...base, runSource: 'sim', paused: true })).toBe('reconnecting');
+    expect(cameraState({ ...base, runSource: 'sim', backendUnreachable: true })).toBe(
+      'unreachable',
+    );
+    expect(cameraState({ ...base, runSource: 'sim', previewPaused: true })).toBe('preview-paused');
   });
 
   it('treats only the states that stop counting as faults', () => {

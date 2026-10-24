@@ -75,7 +75,6 @@ test('pausing the preview stops the picture on this screen but not the counting'
   const pausedNote = viewport.getByText(/^Counting continues and verdicts still show/);
   await expect(pausedNote).toBeVisible();
   await expect(live).toHaveCount(0);
-  await expect(page.getByText(/^Preview paused on this screen\./)).toBeVisible();
   // The server keeps counting while the picture is paused.
   await expect.poll(sorted, { timeout: 30_000 }).toBeGreaterThan(before);
 

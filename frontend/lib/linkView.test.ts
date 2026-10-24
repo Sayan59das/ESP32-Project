@@ -66,6 +66,37 @@ describe('linkView', () => {
     expect(linkTone(view.kind)).toBe('neutral');
   });
 
+  it('never calls the simulator or a replay "Linked": there is no camera behind them', () => {
+    for (const [source, label] of [
+      ['sim', 'Simulator'],
+      ['replay', 'Replay'],
+    ] as const) {
+      const base = stateWith({});
+      const state = {
+        ...base,
+        server: base.server && { ...base.server, run: { ...base.server.run, source } },
+      };
+      const view = linkView(state, NOW);
+      expect(view.kind).toBe('simulated');
+      expect(view.label).toBe(label);
+      expect(view.sentence).toMatch(/No camera is connected\./);
+      expect(view.sentence).toMatch(/switching the camera on or off changes nothing/);
+      expect(linkTone(view.kind)).toBe('neutral');
+    }
+  });
+
+  it('still reports a dropped stream first when the data is simulated', () => {
+    const base = stateWith({}, { downSince: NOW - 10_000 });
+    const state = {
+      ...base,
+      server: base.server && {
+        ...base.server,
+        run: { ...base.server.run, source: 'sim' as const },
+      },
+    };
+    expect(linkView(state, NOW).kind).toBe('reconnecting');
+  });
+
   it('carries the number of board restarts for the reset notice', () => {
     expect(linkView(stateWith({ nano_resets_seen: 2 }), NOW).resets).toBe(2);
   });

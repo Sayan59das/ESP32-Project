@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { ApiError, api, urls } from '@/lib/api';
+import { ApiError, api } from '@/lib/api';
 import { copy } from '@/lib/copy';
 import { shortTime } from '@/lib/format';
 import type { Run, State } from '@/lib/types';
 
 import styles from './RunControls.module.css';
-import { Button, buttonClass } from './ui/Button';
+import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
 import { Icon } from './ui/Icon';
 
@@ -66,23 +66,16 @@ export function RunControls({
         <Button variant="primary" icon="plus" onClick={() => setAsking(true)}>
           {copy.startNewRun}
         </Button>
-        <a className={buttonClass('secondary')} href={urls.exportCsv} download>
-          <Icon name="download" size={18} />
-          <span>{copy.exportCsv}</span>
-        </a>
       </div>
-      <div>
-        <p className={styles.note}>{copy.exportNote}</p>
-        {/* Always in the page, so screen readers hear what appears in it. */}
-        <div role="status" className={styles.status}>
-          {notice !== null ? <p className={styles.notice}>{notice}</p> : null}
-          {failed ? (
-            <p className={styles.failed}>
-              <Icon name="alert" size={18} />
-              <span>{copy.newRunFailed}</span>
-            </p>
-          ) : null}
-        </div>
+      {/* Always in the page, so screen readers hear what appears in it. */}
+      <div role="status" className={styles.status}>
+        {notice !== null ? <p className={styles.notice}>{notice}</p> : null}
+        {failed ? (
+          <p className={styles.failed}>
+            <Icon name="alert" size={18} />
+            <span>{copy.newRunFailed}</span>
+          </p>
+        ) : null}
       </div>
       <Dialog
         open={asking}

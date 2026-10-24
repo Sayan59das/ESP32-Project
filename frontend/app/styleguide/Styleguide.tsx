@@ -49,7 +49,6 @@ const ICONS: IconName[] = [
   'reset',
   'simulated',
   'replay',
-  'download',
   'pause',
   'play',
   'plus',
@@ -141,7 +140,7 @@ export function Styleguide() {
             <Button variant="primary" icon="plus" onClick={() => setOpen(true)}>
               Start new run
             </Button>
-            <Button icon="download">Export CSV</Button>
+            <Button icon="pause">Pause</Button>
             <Button variant="ghost">Ghost</Button>
             <Button size="sm">Small</Button>
             <Button disabled>Disabled</Button>
@@ -207,7 +206,7 @@ export function Styleguide() {
         onClose={() => setOpen(false)}
         titleId="sg-dialog-title"
         title="Start a new run?"
-        description="This resets the counts on screen. The current run stays saved and in the CSV export."
+        description={copy.confirmBody}
         initialFocus={keep}
         footer={
           <>

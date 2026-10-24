@@ -169,6 +169,18 @@ therefore counts from the **scene**, not from the model alone (`Model/presence.p
    removed.
 
 A verdict below 60% confidence becomes `uncertain` and is counted as unsure, in neither bin.
+
+**A camera that is off.** The counter ignores overall brightness and the model has no "empty"
+class, so a picture that goes black or flat would look like "the view changed" and the model
+would answer confidently about nothing: a false item. `FrameHealth` (also in
+`Model/presence.py`) therefore checks every frame before the model or the counter sees it. A
+mean brightness under 20, a contrast (standard deviation) under 4, or ten identical frames in
+a row mean the picture is dead; every training frame has a brightness of at least 59 and a
+contrast of at least 30, so a live picture from this rig is nowhere near the limits. Dead
+frames are never counted, the camera bridge stops sending heartbeats so the console says the
+camera is not responding, and when the picture returns, or after a gap of 3 seconds or more in
+the stream, the counter learns the empty view again (the view must be empty). The limits are
+constants at the top of `presence.py`.
 The logic is pure NumPy with no clock or I/O of its own (the caller passes the time), which is
 what makes it unit-testable.
 
@@ -231,7 +243,7 @@ every connected browser.
 | Source | Purpose |
 | --- | --- |
 | `serial` | A real device, or any pyserial URL such as `socket://127.0.0.1:7777`. Reconnects by itself with backoff from 1 s to 10 s. Reports a busy port instead of crashing |
-| `sim` | Synthetic events and synthetic grayscale frames with dark silhouettes. Always labelled "Simulated data" |
+| `sim` | Synthetic events and synthetic grayscale frames with dark silhouettes. Always labelled "Simulated data". It depends on no camera: switching a camera on or off changes nothing |
 | `replay` | Plays back a recorded session at its original timing, looped, under a "Replay" banner |
 
 **Storage** (SQLite, `ecosort.db`):
@@ -265,8 +277,10 @@ switch to a laptop webcam that the classifier does not use, and a pause control 
 picture) with the bin readout flush beneath it at the same width: two large counters,
 Recyclable (green) and Trash (slate), and an amber Unsure row that is counted in neither.
 Next to it: the last verdict with its confidence and frame, the item breakdown, link status,
-run controls (new run, with a confirmation that explains the current run stays saved and
-exportable), and the event log with thumbnails that open in a dialog. Every outcome is shown
+run controls (new run, with a confirmation that explains the current run stays saved), and the
+event log with thumbnails that open in a dialog. The simulator and a replay are labelled
+"Simulator" and "Replay" in the link badge and "no camera in use" on the camera window, never
+"Linked". Every outcome is shown
 with an icon and a word as well as its colour. There is a light and a dark theme (following
 the system, with a switch). An empty run, paused live updates, an unreachable service, a
 camera that is not linked or not responding, and page errors each have their own message and
@@ -423,6 +437,6 @@ passes.
 - **Verdict.** One classification result for one item: label, confidence, bin, latency and the
   frame the model saw.
 - **Run.** One counting session. Starting a new run resets the counts on screen; the old run
-  stays saved and exportable.
+  stays saved on the computer.
 - **SSE.** Server-Sent Events: a one-way stream from server to browser, used for numbers.
 - **MJPEG.** A stream of JPEG images, used for the live camera view.

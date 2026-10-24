@@ -2,12 +2,14 @@
 // for itself: the wire contract carries no "calibrating" or "item in view" signal, so the
 // chip never claims either.
 import type { LinkLabel } from './reducer';
-import type { Event, Link } from './types';
+import type { Event, Link, SourceName } from './types';
 
 export type CameraState =
   | 'unreachable' // the classifier service does not answer
   | 'reconnecting' // the live stream dropped; it reopens by itself
   | 'connecting' // no state from the service yet
+  | 'simulated' // the simulator is making up items: there is no camera at all
+  | 'replay' // a recorded session is playing back: there is no camera at all
   | 'not-linked' // the service is up, the camera link is not
   | 'not-responding' // the link is open but heartbeats stopped
   | 'counted' // a verdict arrived a moment ago
@@ -22,6 +24,8 @@ export interface CameraInputs {
   paused: boolean;
   link: Link | null;
   linkLabel: LinkLabel;
+  /** Where the run's items come from: the camera, the simulator or a replay. */
+  runSource: SourceName | null;
   /** The verdict held on screen, if any. */
   verdict: Event | null;
   /** The viewer paused the live preview on this screen. */
@@ -36,6 +40,10 @@ export function cameraState(i: CameraInputs): CameraState {
   if (i.backendUnreachable) return 'unreachable';
   if (i.paused) return 'reconnecting';
   if (i.link === null) return 'connecting';
+  // Generated items depend on no camera, so say that, and never invite anyone to place an item.
+  if (i.runSource === 'sim' || i.runSource === 'replay') {
+    return i.previewPaused ? 'preview-paused' : i.runSource === 'sim' ? 'simulated' : 'replay';
+  }
   if (!i.link.source_open) return 'not-linked';
   if (i.linkLabel === 'stale') return 'not-responding';
   if (i.verdict !== null) return i.verdict.bin === 'unsure' ? 'unsure' : 'counted';

@@ -5,7 +5,13 @@ import { age, duration } from './format';
 import { heartbeatAge, isPaused, linkLabel, portBusy, type ConsoleState } from './reducer';
 
 export type LinkKind =
-  'linked' | 'reconnecting' | 'connecting' | 'not-linked' | 'not-responding' | 'unreachable';
+  | 'linked'
+  | 'simulated' // the simulator or a replay: there is no camera to be linked
+  | 'reconnecting'
+  | 'connecting'
+  | 'not-linked'
+  | 'not-responding'
+  | 'unreachable';
 
 export interface LinkView {
   kind: LinkKind;
@@ -19,6 +25,7 @@ export interface LinkView {
 
 const LABELS: Record<LinkKind, string> = {
   linked: copy.linkOpen,
+  simulated: copy.linkSimulated,
   reconnecting: copy.linkReconnecting,
   connecting: copy.chip.connecting,
   'not-linked': copy.linkClosed,
@@ -45,9 +52,9 @@ function linkedSentence(
 export function linkView(state: ConsoleState, now: number, previewPaused = false): LinkView {
   const link = state.server?.link ?? null;
   const resets = link?.nano_resets_seen ?? 0;
-  const make = (kind: LinkKind, sentence: string): LinkView => ({
+  const make = (kind: LinkKind, sentence: string, label = LABELS[kind]): LinkView => ({
     kind,
-    label: LABELS[kind],
+    label,
     sentence,
     resets,
   });
@@ -55,6 +62,10 @@ export function linkView(state: ConsoleState, now: number, previewPaused = false
   if (state.backendUnreachable) return make('unreachable', copy.backendUnreachable(API_BASE));
   if (isPaused(state, now)) return make('reconnecting', copy.streamPaused);
   if (link === null) return make('connecting', 'Connecting to the classifier service.');
+  // Generated items have no camera behind them, so "Linked" would say something untrue.
+  const source = state.server?.run.source;
+  if (source === 'sim') return make('simulated', copy.simulatorSentence);
+  if (source === 'replay') return make('simulated', copy.replaySentence, copy.linkReplay);
   if (!link.source_open)
     return make('not-linked', portBusy(link) ? copy.portBusy : copy.nanoNotLinked);
   const heartbeat = heartbeatAge(state, now);
@@ -70,9 +81,9 @@ export function linkView(state: ConsoleState, now: number, previewPaused = false
   );
 }
 
-/** Faults get the alert tone; waiting states stay neutral. */
+/** Faults get the alert tone; waiting states and generated data stay neutral. */
 export function linkTone(kind: LinkKind): 'signal' | 'neutral' | 'alert' {
   if (kind === 'linked') return 'signal';
-  if (kind === 'reconnecting' || kind === 'connecting') return 'neutral';
+  if (kind === 'reconnecting' || kind === 'connecting' || kind === 'simulated') return 'neutral';
   return 'alert';
 }
