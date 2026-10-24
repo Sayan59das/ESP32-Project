@@ -91,5 +91,6 @@ describe('labelText', () => {
   it('formats a label for display', () => {
     expect(labelText('glass_bottle')).toBe('Glass bottle');
     expect(labelText('pen')).toBe('Pen');
+    expect(labelText('non_recyclable')).toBe('Non-recyclable');
   });
 });

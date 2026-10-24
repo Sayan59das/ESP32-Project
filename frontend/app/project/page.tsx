@@ -1,12 +1,15 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import type { CSSProperties, ReactNode } from 'react';
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
 
 import { FlowDiagram } from '@/components/FlowDiagram';
+import { OUTCOMES } from '@/components/outcome';
 import { SiteHeader } from '@/components/SiteHeader';
-import { copy } from '@/lib/copy';
+import { Badge } from '@/components/ui/Badge';
+import { Icon } from '@/components/ui/Icon';
+import { measured, NotMeasured } from '@/components/ui/Measured';
 import { type Credit, type Metrics, labelText, parseMetrics } from '@/lib/metrics';
 
 import styles from './project.module.css';
@@ -39,43 +42,92 @@ async function loadMetrics(): Promise<{ metrics: Metrics; problem: string | null
 }
 
 const accuracy = (v: number) => `${(v * 100).toFixed(1)}%`;
+const ms = (v: number) => `${v} ms`;
+const kb = (v: number) => `${v} KB`;
 
-function show<T>(value: T | null, format: (v: T) => ReactNode): ReactNode {
-  return value === null ? (
-    <span className={styles.missing}>{copy.notMeasured}</span>
-  ) : (
-    format(value)
-  );
-}
+const SECTIONS = [
+  { id: 'what', title: 'What it does and how it works' },
+  { id: 'how', title: 'How one item gets sorted' },
+  { id: 'results', title: 'Results' },
+  { id: 'confusion', title: 'Confusion matrix' },
+  { id: 'limits', title: 'Known limits' },
+  { id: 'parts', title: 'Wiring and parts' },
+  { id: 'credits', title: 'Credits and licences' },
+] as const;
 
-const SOFTWARE: Credit[] = [
-  { name: 'Archivo typeface, Omnibus-Type', licence: 'SIL Open Font License 1.1', url: null },
+type SectionId = (typeof SECTIONS)[number]['id'];
+
+const TYPEFACES: Credit[] = [
+  {
+    name: 'Archivo, The Archivo Project Authors (Omnibus-Type)',
+    licence: 'SIL Open Font License 1.1',
+    url: null,
+  },
+  {
+    name: 'Atkinson Hyperlegible Next, The Atkinson Hyperlegible Next Project Authors',
+    licence: 'SIL Open Font License 1.1',
+    url: null,
+  },
+];
+
+const WEBSITE_SOFTWARE: Credit[] = [
   { name: 'Next.js and React', licence: 'MIT', url: null },
   { name: 'FastAPI', licence: 'MIT', url: null },
+  { name: 'Uvicorn', licence: 'BSD-3-Clause', url: null },
+  { name: 'Pydantic', licence: 'MIT', url: null },
   { name: 'pyserial', licence: 'BSD-3-Clause', url: null },
   { name: 'Pillow', licence: 'MIT-CMU', url: null },
+  { name: 'NumPy, which runs the model', licence: 'BSD-3-Clause', url: null },
+];
+
+const TRAINING_SOFTWARE: Credit[] = [
+  { name: 'PyTorch and torchvision', licence: 'BSD-3-Clause', url: null },
+  { name: 'OpenCV', licence: 'Apache-2.0', url: null },
+  { name: 'scikit-learn', licence: 'BSD-3-Clause', url: null },
+  { name: 'Matplotlib', licence: 'Matplotlib License (PSF-based)', url: null },
 ];
 
 function CreditList({ items }: { items: Credit[] }) {
   return (
-    <ul className={styles.list}>
+    <ul className={styles.credits}>
       {items.map((c) => (
         <li key={c.name}>
-          {c.url ? <a href={c.url}>{c.name}</a> : c.name}, {c.licence}
+          <span className={styles.creditName}>{c.url ? <a href={c.url}>{c.name}</a> : c.name}</span>
+          <span className={styles.creditLicence}>{c.licence}</span>
         </li>
       ))}
     </ul>
   );
 }
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+function Section({ id, children }: { id: SectionId; children: ReactNode }) {
+  const title = SECTIONS.find((s) => s.id === id)?.title ?? id;
   return (
-    <tr>
-      <th scope="row" className={styles.head}>
-        {label}
-      </th>
-      <td className={styles.cell}>{children}</td>
-    </tr>
+    <section className={styles.section} id={id} aria-labelledby={`${id}-title`}>
+      <h2 id={`${id}-title`} className={styles.h2}>
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+/** A large measured value with its label, or "Not measured yet". */
+function Stat({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className={styles.stat}>
+      <dt className={styles.statLabel}>{label}</dt>
+      <dd className={styles.statValue}>{children}</dd>
+    </div>
+  );
+}
+
+function Detail({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className={styles.detail}>
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </div>
   );
 }
 
@@ -93,54 +145,136 @@ export default async function ProjectPage() {
     <>
       <SiteHeader current="project" />
       <main className={styles.main}>
-        <h1 className={styles.h1}>How EcoSort Edge works</h1>
-        {problem !== null ? <p className={styles.problem}>{problem}</p> : null}
+        <div className={styles.intro}>
+          <h1 className={styles.h1}>How EcoSort Edge works</h1>
+          <p className={styles.lede}>
+            A camera, a small neural network and one laptop that sort single items of waste into
+            recyclable or non-recyclable, and count each one once.
+          </p>
+          <dl className={styles.facts}>
+            <div className={styles.fact}>
+              <dt>Camera</dt>
+              <dd>OV7675, 160 by 120 grayscale</dd>
+            </div>
+            <div className={styles.fact}>
+              <dt>The model&rsquo;s answers</dt>
+              <dd>Recyclable or non-recyclable</dd>
+            </div>
+            <div className={styles.fact}>
+              <dt>Unsure</dt>
+              <dd>Below 60% confidence, counted in neither bin</dd>
+            </div>
+            <div className={styles.fact}>
+              <dt>Network</dt>
+              <dd>None. Everything runs on this laptop</dd>
+            </div>
+          </dl>
+          <nav className={styles.toc} aria-label="On this page">
+            <p className={styles.tocTitle}>On this page</p>
+            <ol className={styles.tocList}>
+              {SECTIONS.map((s) => (
+                <li key={s.id}>
+                  <a href={`#${s.id}`}>{s.title}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </div>
 
-        <section className={styles.section} aria-labelledby="what">
-          <h2 id="what" className={styles.h2}>
-            What it does and how it works
-          </h2>
+        {problem !== null ? (
+          <p className={styles.problem}>
+            <Icon name="alert" size={20} />
+            <span>{problem}</span>
+          </p>
+        ) : null}
+
+        <Section id="what">
           <p className={styles.prose}>
             EcoSort Edge sorts single items of waste into recyclable or non-recyclable. An OV7675
-            camera on an Arduino streams grayscale frames to the laptop over USB. A small neural
-            network trained on our own photos labels each frame, and when an item is placed in view
-            it is counted once, in the matching bin. A lookup table on the server, not the model,
-            decides which bin a label belongs to.
+            camera on an Arduino streams small grayscale frames to the laptop over USB. A small
+            neural network trained on our own photos labels each frame, and when an item is placed
+            in view it is counted once, in the matching bin. A lookup table in the website bridge,
+            not the model, decides which bin a label belongs to.
           </p>
           <p className={styles.prose}>
-            Everything runs on this one laptop with no network: the camera bridge reads the
-            board&rsquo;s USB stream and runs the model, the bridge checks each verdict, stores it
-            with the frame the model saw, and serves this console. The browser never adds to a
+            Everything runs on this one laptop with no network. The camera bridge reads the camera
+            and runs the model. The website bridge checks each verdict, stores it with the frame the
+            model saw, keeps the counts and serves this console. The browser never adds to a
             counter.
           </p>
-        </section>
+        </Section>
 
-        <section className={styles.section} aria-labelledby="how">
-          <h2 id="how" className={styles.h2}>
-            How one item gets sorted
-          </h2>
+        <Section id="how">
           <FlowDiagram />
-        </section>
+          <h3 className={styles.h3}>Three outcomes</h3>
+          <ul className={styles.outcomes}>
+            <li>
+              <Badge tone={OUTCOMES.recyclable.tone} icon={OUTCOMES.recyclable.icon}>
+                {OUTCOMES.recyclable.word}
+              </Badge>
+              <span>Counted in the recyclable bin.</span>
+            </li>
+            <li>
+              <Badge tone={OUTCOMES.trash.tone} icon={OUTCOMES.trash.icon}>
+                {OUTCOMES.trash.word}
+              </Badge>
+              <span>Non-recyclable items, counted in the trash bin.</span>
+            </li>
+            <li>
+              <Badge tone={OUTCOMES.unsure.tone} icon={OUTCOMES.unsure.icon}>
+                {OUTCOMES.unsure.word}
+              </Badge>
+              <span>
+                The model is less than 60% sure. Shown, but counted in neither bin; remove the item
+                as usual.
+              </span>
+            </li>
+          </ul>
+        </Section>
 
-        <section className={styles.section} aria-labelledby="results">
-          <h2 id="results" className={styles.h2}>
-            Results
-          </h2>
+        <Section id="results">
+          {/* The honest reading comes first, before any number. */}
+          <div className={styles.caution} role="note" aria-labelledby="caution-title">
+            <p id="caution-title" className={styles.cautionTitle}>
+              Read any accuracy here with care
+            </p>
+            <p>
+              The model has only been checked on validation frames from the same capture sessions as
+              its training frames: the same rig, the same light, the same background. A score on
+              frames like those is optimistic. Expect lower accuracy with a different bin, different
+              light or a different angle. A fair figure needs test frames captured separately.
+            </p>
+          </div>
           <p className={styles.note}>
-            Every value comes from data/metrics.json. A value that has not been measured says so.
+            Every value below comes from data/metrics.json. A value that has not been measured says
+            so.
           </p>
+          <dl className={styles.stats}>
+            <Stat label="Overall test accuracy">{measured(m.overall_test_accuracy, accuracy)}</Stat>
+            <Stat label="Inference time, median">{measured(m.latency_ms_p50, ms)}</Stat>
+            <Stat label="Inference time, 95th percentile">{measured(m.latency_ms_p95, ms)}</Stat>
+          </dl>
+          <p className={styles.note}>
+            Inference time is the model alone on one frame, wherever it runs (by default the camera
+            bridge on this laptop). It is not the time from placing an item to its count changing on
+            screen.
+          </p>
+
+          <h3 className={styles.h3}>Per class, on the test set</h3>
           {classes.length > 0 ? (
             <table className={styles.table}>
-              <caption className={styles.caption}>Per class, on the test set</caption>
+              <caption className="visually-hidden">
+                Test images and test accuracy for each class
+              </caption>
               <thead>
                 <tr>
                   <th scope="col" className={styles.head}>
                     Item
                   </th>
-                  <th scope="col" className={`${styles.head} ${styles.num}`}>
+                  <th scope="col" className={styles.headNumber}>
                     Test images
                   </th>
-                  <th scope="col" className={`${styles.head} ${styles.num}`}>
+                  <th scope="col" className={styles.headNumber}>
                     Test accuracy
                   </th>
                 </tr>
@@ -148,109 +282,128 @@ export default async function ProjectPage() {
               <tbody>
                 {classes.map((label) => (
                   <tr key={label}>
-                    <th scope="row" className={styles.head}>
+                    <th scope="row" className={styles.rowHead}>
                       {labelText(label)}
                     </th>
-                    <td className={styles.num}>
-                      {show(m.test_images_per_class?.[label] ?? null, String)}
+                    <td className={styles.number}>
+                      {measured(m.test_images_per_class?.[label] ?? null, String)}
                     </td>
-                    <td className={styles.num}>
-                      {show(m.test_accuracy_per_class?.[label] ?? null, accuracy)}
+                    <td className={styles.number}>
+                      {measured(m.test_accuracy_per_class?.[label] ?? null, accuracy)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           ) : (
-            <p className={styles.prose}>
-              Test images and accuracy per class:{' '}
-              <span className={styles.missing}>{copy.notMeasured}</span>
+            <p className={styles.inline}>
+              Test images and accuracy for each class: <NotMeasured />
             </p>
           )}
-          <table className={styles.table}>
-            <caption className={styles.caption}>The model on the Nano</caption>
-            <tbody>
-              <Row label="Overall test accuracy">{show(m.overall_test_accuracy, accuracy)}</Row>
-              <Row label="Inference time, median">{show(m.latency_ms_p50, (v) => `${v} ms`)}</Row>
-              <Row label="Inference time, 95th percentile">
-                {show(m.latency_ms_p95, (v) => `${v} ms`)}
-              </Row>
-              <Row label="Peak RAM">{show(m.ram_kb_peak, (v) => `${v} KB`)}</Row>
-              <Row label="Flash">{show(m.flash_kb, (v) => `${v} KB`)}</Row>
-              <Row label="Model input">{show(m.model_input, String)}</Row>
-              <Row label="Model architecture">{show(m.model_architecture, String)}</Row>
-              <Row label="Dataset notes">{show(m.dataset_notes, String)}</Row>
-            </tbody>
-          </table>
-          <p className={styles.note}>
-            Inference time is measured on the Nano for the classifier alone. It is not the time from
-            an object arriving to its count changing on screen.
-          </p>
-        </section>
 
-        <section className={styles.section} aria-labelledby="confusion">
-          <h2 id="confusion" className={styles.h2}>
-            Confusion matrix
-          </h2>
+          <h3 className={styles.h3}>The model</h3>
+          <dl className={styles.details}>
+            <Detail label="Model input">{measured(m.model_input, String)}</Detail>
+            <Detail label="Model architecture">{measured(m.model_architecture, String)}</Detail>
+            <Detail label="Dataset notes">{measured(m.dataset_notes, String)}</Detail>
+            <Detail label="Peak RAM, on a board">{measured(m.ram_kb_peak, kb)}</Detail>
+            <Detail label="Flash, on a board">{measured(m.flash_kb, kb)}</Detail>
+          </dl>
+          <p className={styles.note}>
+            RAM and flash apply only when the model runs on an Arduino Nano instead of the laptop,
+            the optional firmware path.
+          </p>
+        </Section>
+
+        <Section id="confusion">
           {matrix === null ? (
-            <p className={styles.prose}>No confusion matrix in data/metrics.json yet.</p>
+            <div className={styles.emptyMatrix}>
+              <NotMeasured />
+              <p className={styles.prose}>
+                Add <code>confusion_matrix</code> to data/metrics.json: the labels, then one row for
+                each true item giving how often the model predicted each label.
+              </p>
+            </div>
           ) : (
-            <div className={styles.scroll} role="region" aria-labelledby="confusion" tabIndex={0}>
-              <table className={styles.matrix}>
-                <caption className={styles.caption}>
-                  Rows are the true item, columns what the model predicted. The diagonal is correct.
-                </caption>
-                <thead>
-                  <tr>
-                    <td className={styles.cell} />
-                    {matrix.labels.map((label) => (
-                      <th key={label} scope="col" className={`${styles.head} ${styles.num}`}>
-                        {labelText(label)}
+            <>
+              <p id="confusion-note" className={styles.note}>
+                Rows are the true item, columns what the model predicted. The diagonal, in bold, is
+                correct; the shading is each row&rsquo;s share.
+              </p>
+              <div
+                className={styles.scroll}
+                role="region"
+                aria-labelledby="confusion-title"
+                tabIndex={0}
+              >
+                <table className={styles.matrix} aria-describedby="confusion-note">
+                  <caption className="visually-hidden">Confusion matrix on the test set</caption>
+                  <thead>
+                    <tr>
+                      <td className={styles.corner} />
+                      <th scope="colgroup" colSpan={matrix.labels.length} className={styles.axis}>
+                        Predicted
                       </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {matrix.rows.map((row, r) => (
-                    <tr key={matrix.labels[r]}>
-                      <th scope="row" className={styles.head}>
-                        {labelText(matrix.labels[r] ?? '')}
+                    </tr>
+                    <tr>
+                      <th scope="col" className={styles.head}>
+                        True item
                       </th>
-                      {row.map((cell, c) => (
-                        <td key={c} className={r === c ? styles.diagonal : styles.num}>
-                          {cell}
-                        </td>
+                      {matrix.labels.map((label) => (
+                        <th key={label} scope="col" className={styles.headNumber}>
+                          {labelText(label)}
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {matrix.rows.map((row, r) => {
+                      const total = row.reduce((sum, cell) => sum + cell, 0);
+                      return (
+                        <tr key={matrix.labels[r]}>
+                          <th scope="row" className={styles.rowHead}>
+                            {labelText(matrix.labels[r] ?? '')}
+                          </th>
+                          {row.map((cell, c) => (
+                            <td
+                              key={c}
+                              className={
+                                r === c ? `${styles.cell} ${styles.diagonal}` : styles.cell
+                              }
+                              style={{ '--share': total > 0 ? cell / total : 0 } as CSSProperties}
+                            >
+                              {cell}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
-        </section>
+        </Section>
 
-        <section className={styles.section} aria-labelledby="limits">
-          <h2 id="limits" className={styles.h2}>
-            Known limits
-          </h2>
-          <ul className={styles.list}>
+        <Section id="limits">
+          <ul className={styles.limits}>
             <li>
               The model has two answers, recyclable and non-recyclable. Anything else is forced into
-              one of them, or reported as unsure when the score is low; it cannot say &ldquo;this is
-              something new&rdquo;. It has no &ldquo;empty&rdquo; answer either, so an empty view is
-              recognised by comparing it with the empty background.
+              one of them, or reported as unsure when its confidence is below 60%; it cannot say
+              &ldquo;this is something new&rdquo;. It has no &ldquo;empty&rdquo; answer either, so
+              the camera bridge recognises an empty view by comparing it with the empty background.
             </li>
             <li>
               The camera is 160 by 120 pixels and grayscale, so thin or small objects are only a few
-              pixels wide and how an object lies in front of the camera matters.
+              pixels wide, and how an object lies in front of the camera matters.
             </li>
             <li>
               Glass is hard in grayscale: a clear bottle is mostly reflections and the background
               showing through it.
             </li>
             <li>
-              Our test images come from the same fixed rig, light and background as the training
-              images, so the test accuracy says little about a different bin, light or angle.
+              Every frame so far comes from one rig, one light and one background, so accuracy
+              measured on those frames says little about a different bin, light or angle.
             </li>
             <li>
               An item is counted when the view changes from the empty background and the
@@ -263,19 +416,17 @@ export default async function ProjectPage() {
               video.
             </li>
           </ul>
-        </section>
+        </Section>
 
-        <section className={styles.section} aria-labelledby="parts">
-          <h2 id="parts" className={styles.h2}>
-            Wiring and parts
-          </h2>
+        <Section id="parts">
           <ul className={styles.list}>
-            <li>Arduino board streaming the camera, with the OV7675 camera module</li>
-            <li>USB data cable to the laptop (a charge-only cable carries no data)</li>
-            <li>A laptop to run the model, the bridge and this console</li>
+            <li>An Arduino board streaming the camera, with the OV7675 camera module</li>
+            <li>A USB data cable to the laptop (a charge-only cable carries no data)</li>
+            <li>A laptop to run the model, both bridges and this console</li>
+            {m.ir_sensor !== null ? <li>Trigger sensor: {m.ir_sensor}</li> : null}
           </ul>
           {m.wiring === null ? (
-            <p className={styles.prose}>
+            <p className={styles.note}>
               Pin connections are not recorded yet. Add them to data/metrics.json as wiring.
             </p>
           ) : (
@@ -297,29 +448,33 @@ export default async function ProjectPage() {
               <tbody>
                 {m.wiring.map((w) => (
                   <tr key={`${w.from}-${w.to}`}>
-                    <td className={styles.cell}>{w.from}</td>
-                    <td className={styles.cell}>{w.to}</td>
-                    <td className={styles.cell}>{w.note ?? ''}</td>
+                    <td className={styles.text}>{w.from}</td>
+                    <td className={styles.text}>{w.to}</td>
+                    <td className={styles.text}>{w.note ?? ''}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
-        </section>
+        </Section>
 
-        <section className={styles.section} aria-labelledby="credits">
-          <h2 id="credits" className={styles.h2}>
-            Credits and licences
-          </h2>
+        <Section id="credits">
           <h3 className={styles.h3}>Datasets</h3>
           {m.datasets === null ? (
-            <p className={styles.prose}>No public dataset is listed in data/metrics.json.</p>
+            <p className={styles.prose}>
+              The training frames were captured for this project with Model/capture.py. No public
+              dataset is listed in data/metrics.json.
+            </p>
           ) : (
             <CreditList items={m.datasets} />
           )}
-          <h3 className={styles.h3}>Software and type</h3>
-          <CreditList items={[...SOFTWARE, ...(m.credits ?? [])]} />
-        </section>
+          <h3 className={styles.h3}>Typefaces</h3>
+          <CreditList items={TYPEFACES} />
+          <h3 className={styles.h3}>Software the website runs on</h3>
+          <CreditList items={[...WEBSITE_SOFTWARE, ...(m.credits ?? [])]} />
+          <h3 className={styles.h3}>Software used only to train the model</h3>
+          <CreditList items={TRAINING_SOFTWARE} />
+        </Section>
       </main>
     </>
   );

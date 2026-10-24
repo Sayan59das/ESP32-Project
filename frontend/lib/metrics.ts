@@ -124,8 +124,9 @@ export function parseMetrics(raw: unknown): Metrics {
   };
 }
 
-/** "glass_bottle" -> "Glass bottle". Formatting only; the item table lives on the server. */
+/** "glass_bottle" -> "Glass bottle", "non_recyclable" -> "Non-recyclable". Formatting only;
+ *  the item table lives on the server. */
 export function labelText(label: string): string {
-  const words = label.replace(/_/g, ' ');
+  const words = label.replace(/^non_/, 'non-').replace(/_/g, ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
 }

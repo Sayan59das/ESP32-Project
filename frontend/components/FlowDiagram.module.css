@@ -1,32 +1,61 @@
 .figure {
-  max-width: 480px;
+  display: grid;
+  gap: var(--space-1-5);
+  width: 100%;
+  margin: 0;
+  container-type: inline-size;
 }
 
 .svg {
   display: block;
   width: 100%;
   height: auto;
-  font-family: var(--font-sans);
+  font-family: var(--font-text);
 }
 
-.group {
+/* The row needs about 1000px to keep its text at full size; below that, the column. */
+.row {
+  display: none;
+  max-width: 1100px;
+}
+
+/* Wider than this, the column's text would grow past the body text around it. */
+.column {
+  max-width: 440px;
+}
+
+@container (min-width: 1000px) {
+  .row {
+    display: block;
+  }
+
+  .column {
+    display: none;
+  }
+}
+
+.band {
   fill: var(--surface);
+  stroke: var(--line);
 }
 
-.groupLabel {
+.place {
   fill: var(--ink-muted);
   font-size: 14px;
-  font-weight: var(--type-title-wght);
+  font-weight: var(--weight-bold);
 }
 
 .box {
   fill: var(--ground);
+  stroke: var(--line-strong);
 }
 
 .title {
   fill: var(--ink);
-  font-size: 16px;
-  font-weight: var(--type-title-wght);
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-stretch: var(--display-wdth);
+  font-weight: var(--weight-bold);
 }
 
 .text {
@@ -34,31 +63,43 @@
   font-size: 14px;
 }
 
-.code {
+.linkTitle,
+.linkTitleLarge {
   fill: var(--ink);
-  font-size: 13px;
-  font-weight: var(--type-title-wght);
-  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: var(--weight-bold);
 }
 
-.stroke {
+.linkText,
+.linkTextLarge {
+  fill: var(--ink-muted);
+  font-size: 12px;
+}
+
+.linkTitleLarge {
+  font-size: 14px;
+}
+
+.linkTextLarge {
+  font-size: 13px;
+}
+
+.stroke,
+.cable {
   stroke: var(--ink);
   stroke-width: 2;
   stroke-linecap: square;
+}
+
+.cable {
+  stroke-width: 4;
 }
 
 .head {
   fill: var(--ink);
 }
 
-.cable {
-  stroke: var(--ink);
-  stroke-width: 4;
-  stroke-linecap: square;
-}
-
 .caption {
   max-width: var(--measure);
-  margin-top: var(--space-1);
   color: var(--ink-muted);
 }

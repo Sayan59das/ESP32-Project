@@ -60,7 +60,6 @@
      Atkinson Hyperlegible Next for running text. Both are vendored in app/fonts. */
   --font-display: var(--font-archivo), 'Archivo', system-ui, sans-serif;
   --font-text: var(--font-atkinson), 'Atkinson Hyperlegible Next', system-ui, sans-serif;
-  --font-sans: var(--font-text);
 
   --text-xs: 0.8125rem; /* 13px, uppercase micro-labels only */
   --text-sm: 0.875rem; /* 14px */
@@ -117,36 +116,6 @@
   --motion-base: 200ms;
   --motion-highlight: 250ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-
-  /* Legacy names, kept only until the components move to the names above (phase 2). */
-  --bin-blue: var(--recyclable);
-  --bin-charcoal: var(--trash);
-  --hivis: var(--on-fill);
-  --white: var(--on-fill);
-  --focus-ring-color: var(--focus);
-  --focus-ring-offset: transparent;
-  --radius-camera: var(--radius-md);
-  --radius-bin: 0;
-  --radius-lamp: 0;
-  --radius-button: var(--radius-sm);
-  --type-counter-wdth: 62;
-  --type-counter-wght: 800;
-  --type-counter-size: var(--text-counter);
-  --type-counter-leading: 0.9;
-  --type-counter-tracking: -0.01em;
-  --type-title-wdth: 100;
-  --type-title-wght: 650;
-  --type-title-size: var(--text-xl);
-  --type-body-wdth: 100;
-  --type-body-wght: 400;
-  --type-body-size: var(--text-md);
-  --type-body-leading: var(--leading-body);
-  --motion-slide: 600ms;
-  --motion-ease: var(--ease-standard);
-  --motion-swap: 150ms;
-  --motion-row-fade: 1.2s;
-  --motion-badge: 2.5s;
-  --row-highlight: 0%;
 }
 
 /* Dark, picked by the system. Keep identical to the block below. */

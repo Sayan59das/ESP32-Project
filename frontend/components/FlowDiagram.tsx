@@ -1,143 +1,296 @@
-// How one item gets sorted: the real chain, drawn once, one column so it reads on a phone.
+// How one item gets sorted, drawn as the real chain: camera board, camera bridge, website
+// bridge, console. Inline SVG in two arrangements from the same data: a row where the page
+// is wide enough for its text to stay full size, a column everywhere else. CSS shows one.
 
 import type { ReactNode } from 'react';
 
 import styles from './FlowDiagram.module.css';
 
-interface Step {
+interface Node {
   title: string;
-  lines: string[];
+  text: string;
 }
 
-const RIG: Step[] = [
+interface Link {
+  title: string;
+  detail: string;
+  /** Two short lines for the gap between boxes in the row. */
+  short: [string, string];
+  /** The USB cable is drawn heavier than the connections inside the laptop. */
+  cable?: boolean;
+}
+
+const NODES: Node[] = [
   {
-    title: 'OV7675 camera',
-    lines: ['Looks at the item and captures a 160 by 120', 'grayscale frame, over and over.'],
+    title: 'Camera board',
+    text: 'An OV7675 camera on an Arduino. Streams 160 by 120 grayscale frames and classifies nothing.',
   },
   {
-    title: 'Arduino board',
-    lines: ['Does no classifying. It streams every', 'frame over USB as fast as the cable allows.'],
+    title: 'Camera bridge',
+    text: 'Runs the trained model. Decides when one item is in view and sends one verdict for it.',
+  },
+  {
+    title: 'Website bridge',
+    text: 'FastAPI. Checks every line and frame, picks the bin from its own table and keeps the counts.',
+  },
+  {
+    title: 'Console',
+    text: 'This website. Shows the counts and the frame behind every verdict. It never adds to a count.',
   },
 ];
 
-const LAPTOP: Step[] = [
+const LINKS: Link[] = [
   {
-    title: 'Camera bridge (the trained model)',
-    lines: [
-      'A small neural network labels each frame.',
-      'When an item arrives it counts it once:',
-      'recyclable, non-recyclable or unsure.',
-    ],
+    title: 'USB serial, 921600 baud',
+    detail: 'FRM0 frame packets',
+    short: ['USB serial', 'FRM0 frames'],
+    cable: true,
   },
   {
-    title: 'Bridge (FastAPI)',
-    lines: [
-      'Checks every line and frame, recomputes',
-      'the bin from its own table, stores the',
-      'event with the frame the model saw.',
-    ],
+    title: 'TCP port 7777, the wire contract',
+    detail: 'EVT lines, each with its frame',
+    short: ['TCP :7777', 'EVT + frame'],
   },
-  { title: 'Console', lines: ['Counts by bin, and every verdict�s frame.'] },
+  {
+    title: 'HTTP on this laptop',
+    detail: 'Live counts (SSE) and frames (MJPEG)',
+    short: ['HTTP', 'SSE, MJPEG'],
+  },
 ];
 
-const WIDTH = 360;
-const PAD = 16;
-const BOX_W = 240;
-const BOX_H = 40;
-const LINE = 18;
-const ARROW = 26;
-const BOX_X = PAD;
-const ARROW_X = PAD + 24;
+const PLACES = { rig: 'On the rig', laptop: 'On the laptop' };
 
-function arrow(key: string, y1: number, y2: number): ReactNode {
+const DESCRIPTION =
+  'The camera board streams grayscale frames over USB to the camera bridge on the laptop. ' +
+  'The camera bridge runs the trained model and sends one verdict per item, with its frame, ' +
+  'to the website bridge over TCP. The website bridge checks it, picks the bin and keeps the ' +
+  'counts. The console shows the counts and the frame.';
+
+const BOX_H = 44;
+const LINE = 20;
+
+/** Splits text into lines of at most `max` characters, at spaces. */
+function wrap(text: string, max: number): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(' ')) {
+    const next = line ? `${line} ${word}` : word;
+    if (next.length > max && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function Box({
+  node,
+  x,
+  y,
+  width,
+  chars,
+}: {
+  node: Node;
+  x: number;
+  y: number;
+  width: number;
+  chars: number;
+}) {
   return (
-    <g key={key}>
-      <line className={styles.stroke} x1={ARROW_X} y1={y1} x2={ARROW_X} y2={y2 - 6} />
-      <path className={styles.head} d={`M${ARROW_X - 5} ${y2 - 8}h10l-5 8z`} />
+    <g>
+      <rect className={styles.box} x={x} y={y} width={width} height={BOX_H} rx={3} />
+      <text className={styles.title} x={x + 12} y={y + 29}>
+        {node.title}
+      </text>
+      {wrap(node.text, chars).map((line, n) => (
+        <text key={line} className={styles.text} x={x} y={y + BOX_H + 24 + n * LINE}>
+          {line}
+        </text>
+      ))}
     </g>
   );
 }
 
-/** Lays out one group of steps from `top`; returns its elements and where it ends. */
-function group(label: string, steps: Step[], top: number, keyPrefix: string) {
+function arrowRight(x1: number, x2: number, y: number, cable?: boolean): ReactNode {
+  return (
+    <g>
+      <line className={cable ? styles.cable : styles.stroke} x1={x1} y1={y} x2={x2 - 8} y2={y} />
+      <path className={styles.head} d={`M${x2 - 9} ${y - 6}l9 6-9 6z`} />
+    </g>
+  );
+}
+
+function arrowDown(x: number, y1: number, y2: number, cable?: boolean): ReactNode {
+  return (
+    <g>
+      <line className={cable ? styles.cable : styles.stroke} x1={x} y1={y1} x2={x} y2={y2 - 8} />
+      <path className={styles.head} d={`M${x - 6} ${y2 - 9}h12l-6 9z`} />
+    </g>
+  );
+}
+
+function Labelled({
+  id,
+  width,
+  height,
+  children,
+}: {
+  id: string;
+  width: number;
+  height: number;
+  children: ReactNode;
+}) {
+  return (
+    <svg
+      className={`${styles.svg} ${id === 'row' ? styles.row : styles.column}`}
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-labelledby={`flow-title-${id} flow-desc-${id}`}
+    >
+      <title id={`flow-title-${id}`}>How one item gets sorted</title>
+      <desc id={`flow-desc-${id}`}>{DESCRIPTION}</desc>
+      {children}
+    </svg>
+  );
+}
+
+/** Four boxes in a row: the rig on the left, the laptop on the right. */
+function Row() {
+  const width = 1000;
+  const nodeW = 176;
+  const xs = [16, 300, 554, 808];
+  const boxY = 44;
+  const chars = 22;
+  const lines = Math.max(...NODES.map((n) => wrap(n.text, chars).length));
+  const height = boxY + BOX_H + 24 + (lines - 1) * LINE + 24;
+  const arrowY = boxY + BOX_H / 2;
+  return (
+    <Labelled id="row" width={width} height={height}>
+      <rect className={styles.band} x={0} y={0} width={208} height={height} rx={6} />
+      <rect className={styles.band} x={284} y={0} width={width - 284} height={height} rx={6} />
+      <text className={styles.place} x={16} y={27}>
+        {PLACES.rig}
+      </text>
+      <text className={styles.place} x={300} y={27}>
+        {PLACES.laptop}
+      </text>
+      {NODES.map((node, i) => (
+        <Box key={node.title} node={node} x={xs[i] ?? 0} y={boxY} width={nodeW} chars={chars} />
+      ))}
+      {LINKS.map((link, i) => {
+        const from = (xs[i] ?? 0) + nodeW + 6;
+        const to = (xs[i + 1] ?? 0) - 6;
+        const mid = (from + to) / 2;
+        return (
+          <g key={link.title}>
+            <text className={styles.linkTitle} x={mid} y={arrowY - 26} textAnchor="middle">
+              {link.short[0]}
+            </text>
+            <text className={styles.linkText} x={mid} y={arrowY - 11} textAnchor="middle">
+              {link.short[1]}
+            </text>
+            {arrowRight(from, to, arrowY, link.cable)}
+          </g>
+        );
+      })}
+    </Labelled>
+  );
+}
+
+/** The same chain as a column, for narrow pages. */
+function Column() {
+  const width = 360;
+  const x = 16;
+  const nodeW = width - 32;
+  const arrowX = 40;
+  const chars = 40;
+  const nodeHeight = (node: Node) => BOX_H + 24 + (wrap(node.text, chars).length - 1) * LINE + 16;
   const parts: ReactNode[] = [];
-  let y = top + 44;
-  steps.forEach((step, i) => {
-    if (i > 0) {
-      parts.push(arrow(`${keyPrefix}-a${i}`, y, y + ARROW));
-      y += ARROW + 4;
-    }
+
+  const link = (key: string, l: Link, top: number, span: number) => {
     parts.push(
-      <g key={`${keyPrefix}-s${i}`}>
-        <rect className={styles.box} x={BOX_X} y={y} width={BOX_W} height={BOX_H} />
-        <text className={styles.title} x={BOX_X + 12} y={y + 26}>
-          {step.title}
+      <g key={key}>
+        {arrowDown(arrowX, top, top + span, l.cable)}
+        <text className={styles.linkTitleLarge} x={arrowX + 20} y={top + span / 2 - 4}>
+          {l.title}
         </text>
-        {step.lines.map((line, n) => (
-          <text key={n} className={styles.text} x={BOX_X} y={y + BOX_H + 20 + n * LINE}>
-            {line}
-          </text>
-        ))}
+        <text className={styles.linkTextLarge} x={arrowX + 20} y={top + span / 2 + 15}>
+          {l.detail}
+        </text>
       </g>,
     );
-    y += BOX_H + 20 + (step.lines.length - 1) * LINE + 14;
-  });
-  const bottom = y + 6;
-  return {
-    bottom,
-    node: (
-      <g key={keyPrefix}>
-        <rect className={styles.group} x={0} y={top} width={WIDTH} height={bottom - top} />
-        <text className={styles.groupLabel} x={PAD} y={top + 28}>
-          {label}
-        </text>
-        {parts}
-      </g>
-    ),
   };
+
+  // The rig: the camera board alone.
+  const [board, ...laptopNodes] = NODES;
+  let y = 0;
+  const rigTop = y;
+  y += 44;
+  if (board) {
+    parts.push(<Box key={board.title} node={board} x={x} y={y} width={nodeW} chars={chars} />);
+    y += nodeHeight(board);
+  }
+  const rigBottom = y + 4;
+
+  // The cable between the rig and the laptop.
+  const usb = LINKS[0];
+  const usbSpan = 84;
+  if (usb) link('usb', usb, rigBottom, usbSpan);
+  const laptopTop = rigBottom + usbSpan;
+
+  // The laptop: camera bridge, website bridge, console.
+  y = laptopTop + 44;
+  laptopNodes.forEach((node, i) => {
+    const l = LINKS[i + 1];
+    parts.push(<Box key={node.title} node={node} x={x} y={y} width={nodeW} chars={chars} />);
+    y += nodeHeight(node);
+    if (l && i < laptopNodes.length - 1) {
+      link(`link-${i}`, l, y - 8, 76);
+      y += 68;
+    }
+  });
+  const height = y + 4;
+
+  return (
+    <Labelled id="column" width={width} height={height}>
+      <rect
+        className={styles.band}
+        x={0}
+        y={rigTop}
+        width={width}
+        height={rigBottom - rigTop}
+        rx={6}
+      />
+      <text className={styles.place} x={x} y={rigTop + 27}>
+        {PLACES.rig}
+      </text>
+      <rect
+        className={styles.band}
+        x={0}
+        y={laptopTop}
+        width={width}
+        height={height - laptopTop}
+        rx={6}
+      />
+      <text className={styles.place} x={x} y={laptopTop + 27}>
+        {PLACES.laptop}
+      </text>
+      {parts}
+    </Labelled>
+  );
 }
 
 export function FlowDiagram() {
-  const rig = group('On the rig: Arduino and camera', RIG, 0, 'rig');
-  const usbTop = rig.bottom;
-  const usbBottom = usbTop + 112;
-  const laptop = group('On the laptop', LAPTOP, usbBottom, 'laptop');
-  const height = laptop.bottom;
-
   return (
     <figure className={styles.figure}>
-      <svg
-        className={styles.svg}
-        viewBox={`0 0 ${WIDTH} ${height}`}
-        role="img"
-        aria-labelledby="flow-title flow-desc"
-      >
-        <title id="flow-title">How one item gets sorted</title>
-        <desc id="flow-desc">
-          The OV7675 camera and the Arduino stream grayscale frames over USB; the camera bridge on
-          the laptop runs the trained model, counts each item once and passes the verdict frame and
-          an EVT line to the bridge; the bridge checks and stores them; the console shows the counts
-          and the frame.
-        </desc>
-        {rig.node}
-        <line className={styles.cable} x1={ARROW_X} y1={usbTop} x2={ARROW_X} y2={usbBottom} />
-        <text className={styles.title} x={ARROW_X + 20} y={usbTop + 24}>
-          USB serial, camera frames
-        </text>
-        <text className={styles.text} x={ARROW_X + 20} y={usbTop + 46}>
-          FRM0 packets, 160 by 120,
-        </text>
-        <text className={styles.text} x={ARROW_X + 20} y={usbTop + 64}>
-          19200 grayscale pixels each
-        </text>
-        <text className={styles.code} x={ARROW_X + 20} y={usbTop + 90}>
-          EVT,recyclable,0.97,RECYCLABLE,70
-        </text>
-        {laptop.node}
-      </svg>
+      <Row />
+      <Column />
       <figcaption className={styles.caption}>
-        The camera bridge sends the frame just before its EVT line, so every verdict in the console
-        comes with the exact image the model classified.
+        The camera bridge sends each verdict together with the frame it was made from, so every
+        verdict in the console comes with the exact image the model classified.
       </figcaption>
     </figure>
   );

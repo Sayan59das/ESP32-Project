@@ -44,6 +44,7 @@ PAIRINGS: tuple[Pairing, ...] = (
     Pairing("ink-muted", "ground", TEXT, "notes under panels"),
     Pairing("ink-muted", "surface", TEXT, "secondary text, captions, empty states"),
     Pairing("ink-muted", "surface-sunk", TEXT, "table header labels"),
+    Pairing("ink", "signal-tint", TEXT, "confusion matrix cells at full shading"),
     Pairing("surface", "ink", TEXT, "primary buttons, the simulated and replay badge"),
     Pairing("ground", "ink", TEXT, "inverted labels on ink"),
     Pairing("surface", "ink-muted", TEXT, "primary button on hover"),

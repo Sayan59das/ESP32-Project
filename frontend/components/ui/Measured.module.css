@@ -1,0 +1,15 @@
+.notMeasured {
+  display: inline-flex;
+  gap: var(--space-half);
+  align-items: center;
+  padding: 1px var(--space-1);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink-muted);
+  font-family: var(--font-text);
+  font-size: var(--text-sm);
+  font-stretch: normal;
+  font-weight: var(--weight-medium);
+  line-height: 1.5;
+  white-space: nowrap;
+}
