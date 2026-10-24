@@ -1,7 +1,7 @@
 /*
   Design tokens: "calm instrument panel".
 
-  A warm-neutral ground, flat bordered surfaces, and exactly one hue per outcome:
+  A cool mint-grey ground (the colour of the 3D pages' mist), flat bordered surfaces, and exactly one hue per outcome:
   recyclable is green, trash is slate, unsure is amber. Signal blue is for the system
   itself (link, focus, live). Alert red is for faults only, never for an unsure verdict.
 
@@ -14,12 +14,12 @@
   color-scheme: light;
 
   /* Colour: neutrals */
-  --ground: #f2f0ea; /* page background */
-  --surface: #fbfaf6; /* panels, header, dialogs */
-  --surface-sunk: #e9e6dd; /* table headers, insets, skeletons */
+  --ground: #eef2ef; /* page background */
+  --surface: #fafcfb; /* panels, header, dialogs */
+  --surface-sunk: #e2e9e5; /* table headers, insets, skeletons */
   --ink: #1b211e; /* primary text */
   --ink-muted: #545b56; /* secondary text */
-  --line: #d9d5ca; /* hairlines between rows, decorative only */
+  --line: #d0dad4; /* hairlines between rows, decorative only */
   --line-strong: #767a72; /* control borders, at least 3:1 on every surface */
 
   /* Colour: outcomes. Each has a fill (big counters), a tint and an ink (chips, rows). */
@@ -51,6 +51,11 @@
 
   /* Colour: the camera window is dark in both themes */
   --video-bed: #101412;
+
+  /* The 3D pages' world, where words sit straight on it (the opening of each). These are the
+     fog and ground colours of components/scene/engine/palette.ts; keep them in step. */
+  --scene-mist: #d7e3de;
+  --scene-ground: #b6c9bf;
   --on-video: #e9ece9;
   --on-video-muted: #a6aea9;
   --focus-on-video: #8fc1ec;
@@ -122,12 +127,12 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --ground: #0e1311;
-    --surface: #161c19;
-    --surface-sunk: #1f2723;
+    --ground: #0c1411;
+    --surface: #131d19;
+    --surface-sunk: #1b2823;
     --ink: #e6ebe7;
     --ink-muted: #a3ada7;
-    --line: #2c3631;
+    --line: #26352f;
     --line-strong: #7d8882;
     --recyclable: #1f7048;
     --recyclable-tint: #15291e;
@@ -151,6 +156,8 @@
     --alert-ink: #f3a49c;
     --focus: #8fc1ec;
     --video-bed: #070908;
+    --scene-mist: #08130f;
+    --scene-ground: #0f1c17;
     --on-video: #e9ece9;
     --on-video-muted: #a6aea9;
     --focus-on-video: #8fc1ec;
@@ -163,12 +170,12 @@
 /* Dark, picked by the viewer with the theme switch. Keep identical to the block above. */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --ground: #0e1311;
-  --surface: #161c19;
-  --surface-sunk: #1f2723;
+  --ground: #0c1411;
+  --surface: #131d19;
+  --surface-sunk: #1b2823;
   --ink: #e6ebe7;
   --ink-muted: #a3ada7;
-  --line: #2c3631;
+  --line: #26352f;
   --line-strong: #7d8882;
   --recyclable: #1f7048;
   --recyclable-tint: #15291e;
@@ -192,6 +199,8 @@
   --alert-ink: #f3a49c;
   --focus: #8fc1ec;
   --video-bed: #070908;
+  --scene-mist: #08130f;
+  --scene-ground: #0f1c17;
   --on-video: #e9ece9;
   --on-video-muted: #a6aea9;
   --focus-on-video: #8fc1ec;

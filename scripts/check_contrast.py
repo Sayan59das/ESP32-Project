@@ -69,6 +69,11 @@ PAIRINGS: tuple[Pairing, ...] = (
     Pairing("on-video", "video-bed", TEXT, "camera window title, state chip, messages"),
     Pairing("on-video-muted", "video-bed", TEXT, "camera window note, toggle border"),
     Pairing("video-bed", "on-video", TEXT, "the chosen image source"),
+    # The 3D pages' opening: words straight on the world. Only ink is used for small text there.
+    Pairing("ink", "scene-mist", TEXT, "opening text on the mist at the horizon"),
+    Pairing("ink", "scene-ground", TEXT, "opening text on the ground"),
+    Pairing("recyclable-ink", "scene-mist", LARGE_TEXT, "the accent word of an opening title"),
+    Pairing("recyclable-ink", "scene-ground", LARGE_TEXT, "the accent word on the ground"),
     # Graphics: bars, icons, lamps, borders, focus
     Pairing("recyclable-mark", "surface", GRAPHIC, "recyclable bars, icons and confidence bar"),
     Pairing("trash-mark", "surface", GRAPHIC, "trash bars, icons and confidence bar"),
