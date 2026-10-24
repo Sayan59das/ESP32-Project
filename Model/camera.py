@@ -4,12 +4,16 @@
 #
 # Close the Arduino Serial Monitor before running anything that uses this.
 
+import os
 import sys
 
 import numpy as np
 import serial
+from camera_port import describe_port, find_camera_port, ports_seen
 
-PORT = "COM6"  # change if your board enumerates elsewhere
+# None means scan for the board (an Arduino, an ESP32 or an ESP32-CAM programmer, whichever is
+# plugged in). Name the port with CAMERA_PORT=COM6 if the scan picks the wrong one.
+PORT = os.environ.get("CAMERA_PORT") or None
 BAUD = 921600
 MAGIC = b"FRM0"
 
@@ -20,6 +24,13 @@ class CameraStream:
     Call it in a loop alongside cv2.waitKey() so the window stays responsive."""
 
     def __init__(self, port=PORT, baud=BAUD, timeout=2):
+        if port is None:
+            port = find_camera_port()
+            if port is None:
+                print(f"no camera board found. Serial ports seen: {ports_seen()}")
+                print("plug it in with a data USB cable, or set CAMERA_PORT=COM6")
+                sys.exit(1)
+            print(f"camera board found by scanning: {port} ({describe_port(port)})")
         try:
             self.ser = serial.Serial(port, baud, timeout=timeout)
         except serial.SerialException as e:

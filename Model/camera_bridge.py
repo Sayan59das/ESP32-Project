@@ -28,12 +28,12 @@ from pathlib import Path
 import numpy as np
 import serial
 from PIL import Image
-from serial.tools import list_ports
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))  # numpy_cnn, presence
 sys.path.insert(0, str(HERE.parent / "backend"))  # the website's frame encoder and bin table
 
+from camera_port import describe_port, find_camera_port, ports_seen  # noqa: E402
 from numpy_cnn import NumpyCNN  # noqa: E402
 from presence import UNCERTAIN, FrameHealth, ItemCounter, Verdict  # noqa: E402
 
@@ -47,8 +47,6 @@ HEARTBEAT_S = 5.0
 PREVIEW_INTERVAL_S = 0.2  # at most 5 preview frames per second, like the firmware contract
 CAMERA_FRESH_S = 3.0  # no frame for this long and the heartbeat stops: the console says so
 BOOTLOADER_BAUD = 1200  # an Arduino reboots into its bootloader at this rate
-# USB vendor ids, most likely first: Arduino, Espressif (native USB), CP210x, CH340, FTDI.
-VENDOR_PRIORITY = (0x2341, 0x303A, 0x10C4, 0x1A86, 0x0403)
 
 # The model's class names -> the labels the website's item table knows (backend/app/classes.py).
 WEBSITE_LABEL = {"recyclable": "recyclable", "non_recyclable": "trash", UNCERTAIN: UNCERTAIN}
@@ -56,15 +54,6 @@ WEBSITE_LABEL = {"recyclable": "recyclable", "non_recyclable": "trash", UNCERTAI
 
 def say(message: str) -> None:
     print(f"camera-bridge: {message}", flush=True)
-
-
-def find_camera_port() -> str | None:
-    ports = sorted(list_ports.comports(), key=lambda p: p.device)
-    for vid in VENDOR_PRIORITY:
-        for port in ports:
-            if port.vid == vid:
-                return port.device
-    return None
 
 
 # -- camera ------------------------------------------------------------------------------
@@ -106,7 +95,10 @@ class FrameReader(threading.Thread):
             device = self._port or find_camera_port()
             problem = ""
             if device is None:
-                problem = "no camera board found: plug it in with a data USB cable"
+                problem = (
+                    "no camera board found: plug it in with a data USB cable "
+                    f"(serial ports seen: {ports_seen()})"
+                )
             else:
                 try:
                     ser = serial.serial_for_url(
@@ -118,7 +110,11 @@ class FrameReader(threading.Thread):
                     )
                 else:
                     self.device, self.connected, delay = device, True, 1.0
-                    say(f"camera port {device} open at {self._baud} baud")
+                    found = "" if self._port else " (found by scanning)"
+                    say(
+                        f"camera port {device} ({describe_port(device)}) "
+                        f"open at {self._baud} baud{found}"
+                    )
                     last_problem = ""
                     try:
                         self._read(ser)

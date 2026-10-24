@@ -20,7 +20,9 @@ if not (MODEL_DIR / "presence.py").exists():
     pytest.skip("Model/ is not in this checkout", allow_module_level=True)
 sys.path.insert(0, str(MODEL_DIR))
 
+import camera  # noqa: E402
 import camera_bridge  # noqa: E402
+import camera_port  # noqa: E402
 import numpy_cnn  # noqa: E402
 import presence  # noqa: E402
 
@@ -373,6 +375,94 @@ def test_frame_health_restarts_after_a_gap_in_the_stream() -> None:
     assert not health.feed(noisy(scene(), rng), 0.0).restart
     assert not health.feed(noisy(scene(), rng), 1.0).restart  # a slow second is not a gap
     assert health.feed(noisy(scene(), rng), 10.0).restart
+
+
+# -- scanning for the camera board ---------------------------------------------------------
+
+
+class FakePort:
+    def __init__(self, device: str, vid: int | None, description: str = "USB Serial Device"):
+        self.device = device
+        self.vid = vid
+        self.description = description
+
+
+def plugged_in(monkeypatch: pytest.MonkeyPatch, *ports: FakePort) -> None:
+    monkeypatch.setattr(camera_port.list_ports, "comports", lambda: list(ports))
+
+
+@pytest.mark.parametrize(
+    ("vid", "what"),
+    [
+        (0x2341, "an Arduino Nano ESP32 on its own USB"),
+        (0x303A, "an ESP32-S2 or S3 on Espressif's own USB"),
+        (0x10C4, "an ESP32 dev board with a CP210x chip"),
+        (0x1A86, "an ESP32 dev board or ESP32-CAM-MB with a CH340 chip"),
+        (0x0403, "an ESP32-CAM on an FTDI programmer"),
+    ],
+)
+def test_the_scan_finds_an_esp32_when_it_is_the_only_board(
+    monkeypatch: pytest.MonkeyPatch, vid: int, what: str
+) -> None:
+    plugged_in(monkeypatch, FakePort("COM12", vid))
+    assert camera_port.find_camera_port() == "COM12", what
+
+
+def test_the_scan_prefers_arduino_then_espressif_then_the_adapter_chips(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plugged_in(monkeypatch, FakePort("COM4", 0x10C4), FakePort("COM8", 0x303A))
+    assert camera_port.find_camera_port() == "COM8"
+    plugged_in(monkeypatch, FakePort("COM8", 0x303A), FakePort("COM9", 0x2341))
+    assert camera_port.find_camera_port() == "COM9"
+
+
+def test_the_scan_orders_ports_by_number_not_by_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    plugged_in(monkeypatch, FakePort("COM10", 0x10C4), FakePort("COM3", 0x10C4))
+    assert camera_port.find_camera_port() == "COM3"
+
+
+def test_a_scan_with_no_board_says_what_it_did_see(monkeypatch: pytest.MonkeyPatch) -> None:
+    plugged_in(monkeypatch, FakePort("COM1", None, "Communications Port"), FakePort("COM5", 0x046D))
+    assert camera_port.find_camera_port() is None
+    assert "COM1 (Communications Port)" in camera_port.ports_seen()
+    plugged_in(monkeypatch)
+    assert camera_port.ports_seen() == "none"
+
+
+def test_a_port_is_described_by_what_the_system_calls_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    plugged_in(monkeypatch, FakePort("COM12", 0x10C4, "Silicon Labs CP210x USB to UART Bridge"))
+    assert camera_port.describe_port("COM12") == "Silicon Labs CP210x USB to UART Bridge"
+    assert camera_port.describe_port("COM99") == "serial port"
+
+
+def test_capture_and_live_scan_for_the_board_instead_of_assuming_com6(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    opened: list[str] = []
+
+    class Port:
+        def __init__(self, device: str, baud: int, timeout: float) -> None:
+            opened.append(device)
+
+    plugged_in(monkeypatch, FakePort("COM12", 0x10C4))
+    monkeypatch.setattr(camera.serial, "Serial", Port)
+    camera.CameraStream()  # no port named: scan
+    assert opened == ["COM12"]
+    assert "found by scanning: COM12" in capsys.readouterr().out
+    camera.CameraStream(port="COM6")  # a named port is used as it is
+    assert opened == ["COM12", "COM6"]
+
+
+def test_capture_and_live_say_what_they_saw_when_no_board_is_plugged_in(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    plugged_in(monkeypatch, FakePort("COM1", None, "Communications Port"))
+    with pytest.raises(SystemExit):
+        camera.CameraStream()
+    out = capsys.readouterr().out
+    assert "no camera board found" in out
+    assert "COM1 (Communications Port)" in out
 
 
 # -- reading the camera stream -----------------------------------------------------------

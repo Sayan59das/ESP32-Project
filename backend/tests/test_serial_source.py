@@ -90,6 +90,15 @@ class TestDetection:
         assert find_port([Info("COM9", 0x0403), Info("COM8", 0x1A86)]) == "COM8"
         assert find_port([Info("COM9", 0x0403), Info("COM2", 0x10C4)]) == "COM2"
 
+    def test_finds_an_esp32_when_it_is_the_only_board(self) -> None:
+        # An ESP32-S3 on its own USB, a dev board's CP210x or CH340, an ESP32-CAM's FTDI.
+        for vid in (0x303A, 0x10C4, 0x1A86, 0x0403):
+            assert find_port([Info("COM12", vid)]) == "COM12"
+
+    def test_espressif_usb_comes_after_arduino_and_before_the_adapter_chips(self) -> None:
+        assert find_port([Info("COM4", 0x10C4), Info("COM8", 0x303A)]) == "COM8"
+        assert find_port([Info("COM8", 0x303A), Info("COM9", 0x2341)]) == "COM9"
+
     def test_ignores_unknown_vendors_and_ports_without_one(self) -> None:
         assert find_port([Info("COM1", None), Info("COM5", 0x046D)]) is None
 

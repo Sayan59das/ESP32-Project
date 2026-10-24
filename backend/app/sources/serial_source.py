@@ -22,9 +22,11 @@ from .base import SourceObserver
 
 logger = logging.getLogger(__name__)
 
-# Searched in this order: Arduino first, then the usual USB-serial bridge chips.
+# Searched in this order: Arduino first, then Espressif's own USB, then the usual USB-serial
+# bridge chips (which is how most ESP32 boards and ESP32-CAM programmers connect).
 VENDOR_PRIORITY = (
-    0x2341,  # Arduino
+    0x2341,  # Arduino, including the Nano ESP32
+    0x303A,  # Espressif: an ESP32-S2 or S3 over its own USB
     0x10C4,  # Silicon Labs CP210x
     0x1A86,  # QinHeng CH340
     0x0403,  # FTDI

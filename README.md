@@ -71,6 +71,16 @@ To try it without a board: `python scripts/fake_camera.py` streams scripted fram
 `Model/dataset`, and `python Model/camera_bridge.py --camera socket://127.0.0.1:7778` reads
 them.
 
+### With an ESP32 as the camera board
+
+An ESP32 on its own is enough: `firmware/ecosort_esp32_camera/` streams the same frames as the
+Arduino sketch, and the camera bridge scans the serial ports (Arduino, Espressif, CP210x,
+CH340, FTDI) and finds it, so just plug in the ESP32 and run `run_all.bat`. Window 1 says which
+port it found, or which ports it saw if it found none. Wiring, flashing and troubleshooting are
+in `firmware/ESP32_CAMERA.md`. The sketch compiles for the Arduino Nano ESP32; it has not been
+run with a real camera, and the model has only seen OV7675 frames, so check accuracy with your
+own before relying on it.
+
 ## Quick start (simulator)
 
 Needs Python 3.11+, Node 20+ and GNU make. On Windows install make with
@@ -256,7 +266,8 @@ frontend/           Next.js console: app/, components/, lib/, styles/, e2e/
                     (tokens, components, outcome colours and states: frontend/DESIGN.md)
 Model/              the trained model and the camera bridge: camera_bridge.py, numpy_cnn.py,
                     presence.py, plus train.py, live.py and the dataset
-firmware/           ecosort_io.h for classifying on a Nano instead, its guide and host test
+firmware/           ecosort_io.h for classifying on a Nano instead, its guide and host test;
+                    ecosort_esp32_camera/ and ESP32_CAMERA.md for an ESP32 as the camera board
 scripts/            check_contrast.py, export_openapi.py, fake_nano.py, fake_camera.py, record.py
 run_all.bat         starts everything; stop_all.bat stops it
 data/               metrics.json for /project, sample_session.rec for replay

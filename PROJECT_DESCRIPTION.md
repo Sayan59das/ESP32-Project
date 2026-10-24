@@ -188,8 +188,12 @@ what makes it unit-testable.
 
 `Model/camera_bridge.py` is the only program that touches the camera's serial port.
 
-- Finds the board by USB vendor id (Arduino, Espressif native USB, CP210x, CH340, FTDI, in that
-  order), or uses `--camera COM6` / `CAMERA_PORT`.
+- Finds the board by scanning the serial ports for a USB vendor id (Arduino, Espressif native
+  USB, CP210x, CH340, FTDI, in that order; `Model/camera_port.py`), or uses `--camera COM6` /
+  `CAMERA_PORT`. That covers an ESP32 on its own, whether it connects over its own USB or
+  through one of those adapter chips. The log says which port it found and what the system
+  calls it, and, when it finds nothing, which ports it did see. `capture.py` and `live.py` scan
+  the same way.
 - Never opens the port at 1200 baud, because that reboots an Arduino into its bootloader.
 - Decodes `FRM0` frames (4-byte magic, width, height, then pixels), runs the model, and feeds
   the counter.
@@ -298,7 +302,17 @@ At the moment `data/metrics.json` has every key set to null, so those sections s
 keep focus and give it back), and a test confirms that no page requests anything outside the
 machine.
 
-## 11. Optional: classify on the board instead of the laptop
+## 11. Other boards
+
+**An ESP32 as the camera board.** `firmware/ecosort_esp32_camera/` streams `FRM0` frames from an
+ESP32 with a camera driver supported by `esp32-camera`, so an ESP32 alone can replace the
+Arduino. The camera bridge needs no change: it reads those frames and scans for the board like
+any other. It is written for the Arduino Nano ESP32 with an OV7670/OV7675 module (pin table in
+the guide) and the AI-Thinker ESP32-CAM. It compiles for the Nano ESP32; it has not been flashed
+or run with a camera. The model was trained on OV7675 frames, so accuracy with another sensor is
+unmeasured. Guide: `firmware/ESP32_CAMERA.md`.
+
+**Optional: classify on the board instead of the laptop.**
 
 The original design ran the model on an Arduino Nano 33 BLE Sense Lite (with an infrared
 sensor as the trigger) and used the laptop only as a listener. That path is still supported.
@@ -400,7 +414,7 @@ passes.
 
 | Area | Technology |
 | --- | --- |
-| Camera | OV7675 on an Arduino, grayscale 160x120 over USB serial at 921600 baud |
+| Camera | OV7675 on an Arduino, or an ESP32 camera board (untested on hardware), grayscale 160x120 over USB serial at 921600 baud |
 | Model training | Python, PyTorch, torchvision, scikit-learn, matplotlib, OpenCV (capture) |
 | Model inference | NumPy only (`numpy_cnn.py`), Pillow, pyserial, asyncio |
 | Website bridge | FastAPI, uvicorn, Pydantic, SQLite, Server-Sent Events, MJPEG |
