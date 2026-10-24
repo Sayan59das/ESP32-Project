@@ -7,11 +7,11 @@ import styles from './Measured.module.css';
 
 /** The one way a missing measurement is shown: the words "Not measured yet" in a dashed
  *  outline, so it never reads as a value. Never 0, a dash or an estimate. */
-export function NotMeasured() {
+export function NotMeasured({ label = copy.notMeasured }: { label?: string }) {
   return (
     <span className={styles.notMeasured}>
       <Icon name="waiting" size={14} />
-      <span>{copy.notMeasured}</span>
+      <span>{label}</span>
     </span>
   );
 }

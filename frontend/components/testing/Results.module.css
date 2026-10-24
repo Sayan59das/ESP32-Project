@@ -1,0 +1,194 @@
+/* The full results: a plain, solid page below the story. It covers the 3D world completely, so
+   nothing moves behind a number someone is reading. */
+.results {
+  position: relative;
+  z-index: 2;
+  border-top: var(--border-strong);
+  background: var(--ground);
+}
+
+.inner {
+  display: grid;
+  gap: var(--space-6);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--gutter) var(--space-8);
+}
+
+.intro {
+  display: grid;
+  gap: var(--space-1-5);
+}
+
+.h2 {
+  font-size: clamp(2.25rem, 1.5rem + 3vw, 3.5rem);
+  font-stretch: 70%;
+  font-weight: var(--weight-heavy);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+}
+
+.provenance,
+.lede {
+  max-width: 62ch;
+  color: var(--ink-muted);
+  text-wrap: pretty;
+}
+
+.block {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.h3 {
+  padding-bottom: var(--space-1);
+  border-bottom: 2px solid var(--ink);
+  font-size: var(--text-2xl);
+  font-stretch: var(--display-wdth);
+  font-weight: var(--weight-heavy);
+  line-height: 1.1;
+}
+
+.results code {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+  font-size: 0.92em;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card,
+.slot,
+.media {
+  display: grid;
+  gap: var(--space-1-5);
+  align-content: start;
+  padding: var(--space-3);
+  border: var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+}
+
+.stats {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.stats > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-half) var(--space-2);
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: var(--space-1);
+  border-top: var(--border);
+}
+
+.stats dt {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.stats dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-bold);
+  text-align: right;
+}
+
+.expect {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.slot {
+  min-height: 9rem;
+  border-style: dashed;
+  color: var(--ink-muted);
+}
+
+.slot p {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.media {
+  padding: var(--space-2);
+}
+
+.media figure {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.media img,
+.media video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  background: var(--video-bed);
+}
+
+.media figcaption {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: var(--space-1-5) var(--space-2);
+  border-bottom: var(--border);
+  text-align: left;
+}
+
+.table thead th {
+  background: var(--surface-sunk);
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+.table tfoot th,
+.table tfoot td {
+  border-top: 2px solid var(--ink);
+  border-bottom: 0;
+  font-weight: var(--weight-bold);
+}
+
+@media (max-width: 640px) {
+  .table th,
+  .table td {
+    padding: var(--space-1) var(--space-1);
+    font-size: var(--text-sm);
+  }
+}

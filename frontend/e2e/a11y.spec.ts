@@ -20,7 +20,7 @@ async function open(page: Page, path: string) {
 
 // Both themes, at the desktop and the phone layout: contrast differs by theme, and the
 // phone layout folds columns away.
-for (const path of ['/console', '/project', '/']) {
+for (const path of ['/console', '/project', '/', '/testing']) {
   for (const scheme of ['light', 'dark'] as const) {
     for (const [width, height] of [
       [1920, 1080],

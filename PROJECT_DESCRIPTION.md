@@ -51,7 +51,8 @@ website bridge (backend/, FastAPI)
     |  Server-Sent Events (numbers) + MJPEG (live frames) + REST
     v
 console        (frontend/, Next.js)
-    the page the operator looks at, http://localhost:3000
+    the pages: the story (/), the console the operator looks at (/console, http://localhost:3000/console),
+    the testing results (/testing) and the project page (/project)
 ```
 
 Design rules that run through every layer:
@@ -97,7 +98,9 @@ backend/            the website bridge (FastAPI)
   tests/              pytest suite
 
 frontend/           the console (Next.js 14, React 18, TypeScript)
-  app/(console)/      the main page
+  app/page.tsx        the home story: a scroll through a 3D world (three.js)
+  app/console/        the console: the page the operator works at (flat, no 3D)
+  app/testing/        what was tested and what came out, from data/testing.json
   app/project/        the "How EcoSort Edge works" page and Results
   components/         camera window, bin readout, last verdict, event log, breakdown, ...
   lib/                API client, SSE client, reducer, formatting, metrics parsing, copy text
@@ -290,6 +293,18 @@ the system, with a switch). An empty run, paused live updates, an unreachable se
 camera that is not linked or not responding, and page errors each have their own message and
 next step. The design is documented in `frontend/DESIGN.md`.
 
+**Home story (`/`) and testing page (`/testing`).** Two scroll-driven 3D pages built with three.js
+(loaded only on those pages, so the console is unaffected): a fixed canvas behind eight (home) or
+six (testing) chapters, with a camera that flies between them. Everything in the world is made
+in code (no model, texture or font download), the real words are plain HTML, and the canvas is
+hidden from assistive technology. The movement can be paused and a browser set to reduce motion
+starts paused; without WebGL the words are all still there. The home story's text is a draft
+written from the project's own facts. The testing page shows only what `scripts/record_tests.py`
+recorded in `data/testing.json`: automated checks, seven camera-off scenarios run through the real
+model and counting gate, the model's score on the frames held back from training (with the
+plain statement that it is optimistic), and empty frames for photographs or video of the rig
+until some are added.
+
 **Project page (`/project`).** A written explanation of the system with a flow diagram,
 results, a confusion matrix, limits, wiring and credits. It reads `data/metrics.json` on every
 request. Every key may be null and a null or malformed value renders "Not measured yet".
@@ -343,7 +358,7 @@ run_all.bat check    only verify that everything is ready
 
 The first run creates the Python environment (`.venv`) and installs the Python and website
 packages. Three windows open (camera bridge, website bridge, console) and the browser opens
-`http://localhost:3000`. The script checks that ports 3000, 7777 and 8000 are free and says
+`http://localhost:3000/console`. The script checks that ports 3000, 7777 and 8000 are free and says
 what is wrong if anything is missing (Python, Node, the model file, a busy port).
 
 Put an item in front of the camera: its bin's count goes up by one. Take it away before the

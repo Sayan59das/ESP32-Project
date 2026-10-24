@@ -4,6 +4,9 @@ A "calm instrument panel": flat bordered surfaces on a warm neutral ground, one 
 outcome, big tabular numerals, and almost no motion. Built for an operator about 2 m from
 the screen, who needs the two counters and the latest verdict at a glance.
 
+This file describes the console. The home (`/`) and testing (`/testing`) pages share its
+tokens, type and outcome colours but are 3D scroll stories: see "The 3D pages" at the end.
+
 Everything here is plain CSS Modules over the tokens in `styles/tokens.css`. There are no
 runtime UI dependencies. Fonts and icons are bundled, so the console makes no external
 requests.
@@ -21,7 +24,7 @@ requests.
 4. **Colour never works alone.** Every outcome and status pairs its colour with an icon and
    a word.
 5. **WCAG 2.2 AA** in both themes. `scripts/check_contrast.py` checks every text and
-   graphic pairing the design uses (78 pairings, light and dark) and runs in `make lint`.
+   graphic pairing the design uses (86 pairings, light and dark) and runs in `make lint`.
 
 ## Outcomes: colour, icon, wording
 
@@ -131,3 +134,30 @@ themes; `lib/*.test.ts` covers the logic.
 Use tokens, not raw values. If a new colour pair carries text or a graphic, add it to
 `PAIRINGS` in `scripts/check_contrast.py` and check both themes. Put new wording in
 `lib/copy.ts`. Do not add a number that the server did not send.
+
+## The 3D pages
+
+`/` and `/testing` are stories told over a fixed three.js canvas (`components/scene/`). The
+words are HTML on solid cards (or, in each page's opening, straight on the world), so they
+read the same with the canvas off. The rules above still hold: the numbers on `/testing` come
+from `data/testing.json` and say "Not measured yet" or "Not added yet" when they are missing;
+simulated data is never shown as real; the three outcomes keep their colours and icons.
+
+- **The world.** One scene per page (`components/scene/scenes/`), made in code: a mist, a
+  plateau of hills, the Sorter (a tower of bricks around a lens), a lane and bins, a pipeline of
+  glass blocks, towers of light, screens, a field of photograph tiles, empty frames. Light and
+  dark are two palettes of the same world (`engine/palette.ts`); the outcome colours do not change.
+- **The camera** follows a spline through poses keyed to chapters (`lib/scene/rig.ts`), resting
+  while a chapter's card is pinned and moving between chapters. On a narrow screen the picture
+  moves into the top half and the words sit below.
+- **Labels** pinned to points in the world are decoration that repeats the text. Each leans to a
+  side that is on screen and clear of the cards and of the other labels, or hides
+  (`lib/scene/labels.ts`).
+- **Motion.** Default on, off for `prefers-reduced-motion`, and a "Pause animation" button
+  remembers the choice. Still mode renders on demand only. `?frame=2.5&time=10&quality=low`
+  freezes a chapter for review and tests.
+- **Cost.** Three quality tiers (bloom and shadows only on the top one), a software renderer is
+  forced to the lowest, and it steps down if frames run slow, never back up. Only the home and
+  testing pages load three.js.
+- **Contrast.** Small text straight on the world is `--ink` only, checked against the world's
+  mist and ground colours (`--scene-mist`, `--scene-ground`, kept in step with the palette).

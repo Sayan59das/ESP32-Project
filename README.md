@@ -32,7 +32,7 @@ run_all.bat check    only check that everything is ready
 Plug the camera board in with a data USB cable, close the Arduino Serial Monitor and
 `live.py` (only one program can use the port), keep the camera view **empty**, and run
 `run_all.bat`. The first run creates the Python environment and installs the packages.
-Three windows open and the console opens at http://localhost:3000:
+Three windows open and the console opens at http://localhost:3000/console:
 
 1. **Camera bridge** reads the camera, runs the model and counts items. It finds the board
    by USB vendor id; set `CAMERA_PORT=COM6` (and `CAMERA_BAUD`) at the top of `run_all.bat`
@@ -92,7 +92,7 @@ make setup        # Python venv, npm packages, Playwright's Chromium
 make sim          # bridge on :8000 and console on :3000, simulated data
 ```
 
-Open http://localhost:3000. The header says **Simulated data**, and so does a tag on the
+Open http://localhost:3000/console. The header says **Simulated data**, and so does a tag on the
 camera window: simulated events and frames are never presented as real. The link badge says
 **Simulator**, not "Linked", and the camera window says "Simulated, no camera in use".
 
@@ -209,6 +209,50 @@ plugging it back in. On Linux or macOS `python scripts/fake_nano.py --pty` creat
 pseudo-terminal instead and prints the path for `SERIAL_PORT`. The bench writes to
 `bench.db`, never to the real database.
 
+## The pages
+
+| Address | What it is |
+| --- | --- |
+| `/` | The story: what EcoSort Edge is and why, told as a scroll through a 3D world (three.js). |
+| `/console` | The working console: the camera, the counts and the log. Flat, no 3D. |
+| `/testing` | What was tested and what came out, as a 3D story with the full figures below it. |
+| `/project` | How the project was built and measured, in detail. |
+
+The 3D pages draw with WebGL and need nothing from the network: the fonts, textures and
+reflections are made on the machine. If WebGL is missing the words are all still there. The
+"Pause animation" button stops the movement and is remembered; a browser set to reduce motion
+starts paused. The home page's story text is a draft written from the project's own facts:
+edit `frontend/components/home/HomeStory.tsx`.
+
+## Testing page
+
+`/testing` reads `data/testing.json` on every request, and that file is written by a script:
+
+```
+python scripts/record_tests.py                    run everything and record it
+python scripts/record_tests.py --skip browser     leave out the slow browser suite
+python scripts/record_tests.py --only scenarios   just the camera-off scenarios
+```
+
+It runs the backend, console-logic and browser suites and the colour-contrast check, replays seven
+ways the camera can stop showing a picture through the real model and counting gate, and counts how
+the model did on the frames it was not taught with. The browser suite needs `npm run build` first,
+and the script needs the project's virtualenv. A part that is not run keeps its last recorded
+figures; a part never recorded shows "Not measured yet". The scenarios use a scene built from the
+training frames, not a filmed one: they test the counting, not the lens.
+
+To show photographs or video of the real rig, put the files in `frontend/public/testing/` and list
+them in `data/testing.json`, which the script never overwrites:
+
+```json
+"media": [
+  { "file": "rig.jpg", "kind": "image", "caption": "The rig on the bench" },
+  { "file": "counting.mp4", "kind": "video", "caption": "Counting an item" }
+]
+```
+
+Until then the page shows empty frames that say "Not added yet".
+
 ## Results page
 
 `/project` reads `data/metrics.json` on every request. Every key may be null, and a null or
@@ -268,7 +312,8 @@ Model/              the trained model and the camera bridge: camera_bridge.py, n
                     presence.py, plus train.py, live.py and the dataset
 firmware/           ecosort_io.h for classifying on a Nano instead, its guide and host test;
                     ecosort_esp32_camera/ and ESP32_CAMERA.md for an ESP32 as the camera board
-scripts/            check_contrast.py, export_openapi.py, fake_nano.py, fake_camera.py, record.py
+scripts/            check_contrast.py, export_openapi.py, fake_nano.py, fake_camera.py, record.py,
+                    record_tests.py (writes data/testing.json)
 run_all.bat         starts everything; stop_all.bat stops it
-data/               metrics.json for /project, sample_session.rec for replay
+data/               metrics.json for /project, testing.json for /testing, sample_session.rec for replay
 ```

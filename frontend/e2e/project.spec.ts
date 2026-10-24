@@ -65,7 +65,7 @@ test('no page asks for anything outside this machine', async ({ page }) => {
     outside.push(route.request().url());
     return route.abort();
   });
-  for (const path of ['/console', '/', '/project']) {
+  for (const path of ['/console', '/', '/testing', '/project']) {
     await page.goto(path);
     await page.waitForTimeout(3000);
   }

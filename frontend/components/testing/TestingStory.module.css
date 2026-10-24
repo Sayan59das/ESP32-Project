@@ -1,0 +1,64 @@
+/* The three headline figures in the opening, set straight on the mist like the title. */
+.figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, auto));
+  gap: var(--space-2) var(--space-4);
+  justify-content: start;
+  margin: 0;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-half);
+  padding-top: var(--space-1);
+  border-top: 2px solid var(--ink);
+}
+
+.figure dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 1.6rem + 2vw, 3.4rem);
+  font-stretch: var(--counter-wdth);
+  font-weight: var(--weight-heavy);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.figure dt {
+  max-width: 14ch;
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  line-height: 1.25;
+}
+
+.provenance {
+  max-width: 44rem;
+  font-size: var(--text-sm);
+}
+
+.provenance code {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+  color: var(--ink);
+  font-size: 0.92em;
+  text-shadow: none;
+}
+
+@media (max-width: 640px) {
+  .figures {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-1-5) var(--space-1-5);
+  }
+
+  .figure dd {
+    font-size: 2rem;
+  }
+
+  .figure dt {
+    max-width: none;
+    font-size: var(--text-xs);
+  }
+}

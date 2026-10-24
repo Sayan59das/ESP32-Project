@@ -119,6 +119,7 @@ export const copy = {
   simulatedBanner: 'Simulated data',
   replayBanner: 'Replay of a recorded session',
   notMeasured: 'Not measured yet',
+  notAdded: 'Not added yet',
   unsureNote: 'Not confident enough to pick a bin, so it is counted in neither.',
   inferenceLabel: 'Model inference time',
 } as const;

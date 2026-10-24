@@ -6,7 +6,7 @@ async function firstThumbnail(page: Page) {
   return thumb;
 }
 
-for (const path of ['/console', '/project', '/']) {
+for (const path of ['/console', '/project', '/', '/testing']) {
   test(`on ${path} the first Tab reaches a visible skip link into the main content`, async ({
     page,
   }) => {
@@ -88,6 +88,8 @@ test('every page has its own title', async ({ page }) => {
   await expect(page).toHaveTitle('EcoSort Edge');
   await page.goto('/console');
   await expect(page).toHaveTitle('Console, EcoSort Edge');
+  await page.goto('/testing');
+  await expect(page).toHaveTitle('Testing, EcoSort Edge');
   await page.goto('/project');
   await expect(page).toHaveTitle('Project, EcoSort Edge');
   await page.goto('/no-such-page');

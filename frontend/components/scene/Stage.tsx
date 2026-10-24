@@ -21,7 +21,7 @@ export interface LabelSpec {
   side?: 'right-up' | 'right-down' | 'left-up' | 'left-down';
 }
 
-export type SceneName = 'home';
+export type SceneName = 'home' | 'testing';
 
 const MOTION_KEY = 'ecosort.scene.motion';
 
@@ -33,7 +33,8 @@ function stored(): string | null {
   }
 }
 
-async function loadBuilder(): Promise<SceneBuilder> {
+async function loadBuilder(scene: SceneName): Promise<SceneBuilder> {
+  if (scene === 'testing') return (await import('./scenes/testingScene')).buildTestingScene;
   return (await import('./scenes/homeScene')).buildHomeScene;
 }
 
@@ -81,7 +82,7 @@ export function Stage({
       try {
         const [{ createStage }, build] = await Promise.all([
           import('./engine/createStage'),
-          loadBuilder(),
+          loadBuilder(scene),
         ]);
         if (cancelled) return;
         const made = createStage({
