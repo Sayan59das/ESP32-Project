@@ -413,7 +413,9 @@ def commit_label() -> str | None:
     head = git("rev-parse", "--short", "HEAD")
     if not head:
         return None
-    return f"{head} + uncommitted changes" if git("status", "--porcelain") else head
+    # Tracked files only: a stray untracked file does not change what was tested.
+    changed = git("status", "--porcelain", "--untracked-files=no")
+    return f"{head} + uncommitted changes" if changed else head
 
 
 def main() -> int:

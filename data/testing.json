@@ -1,6 +1,6 @@
 {
-  "recorded_at": "2026-10-24T20:38:44Z",
-  "commit": "8b440d9 + uncommitted changes",
+  "recorded_at": "2026-10-24T21:02:47Z",
+  "commit": "fd684df",
   "suites": [
     {
       "id": "backend",
@@ -9,31 +9,31 @@
       "passed": 331,
       "failed": 0,
       "skipped": 3,
-      "seconds": null
+      "seconds": 18.7
     },
     {
       "id": "frontend",
       "label": "Console logic",
-      "what": "Vitest: state, formatting, link and camera states, scene maths",
-      "passed": 68,
+      "what": "Vitest: state, formatting, link and camera states, the 3D scene's maths",
+      "passed": 83,
       "failed": 0,
       "skipped": 0,
-      "seconds": null
+      "seconds": 2.0
     },
     {
       "id": "browser",
       "label": "Browser",
-      "what": "Playwright: layout, states, keyboard, accessibility and offline checks",
-      "passed": 47,
+      "what": "Playwright: layout, states, keyboard, accessibility, offline and the 3D pages",
+      "passed": 74,
       "failed": 0,
       "skipped": 0,
-      "seconds": null
+      "seconds": 286.9
     },
     {
       "id": "contrast",
       "label": "Colour contrast",
       "what": "Every text and control colour pair in both themes, against WCAG 2.2 AA",
-      "passed": 78,
+      "passed": 86,
       "failed": 0,
       "skipped": 0,
       "seconds": 0.1
