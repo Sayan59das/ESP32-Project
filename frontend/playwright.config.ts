@@ -1,13 +1,17 @@
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 import { defineConfig, devices } from '@playwright/test';
 
 // The smoke test runs against the simulator with a throwaway database, never a real run.
+// `make setup` puts the virtualenv in backend/.venv, run_all.bat puts it in the repo root.
+const venvPython = process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python';
 const python =
-  process.platform === 'win32'
-    ? path.resolve(__dirname, '../backend/.venv/Scripts/python.exe')
-    : path.resolve(__dirname, '../backend/.venv/bin/python');
+  [`../backend/.venv/${venvPython}`, `../.venv/${venvPython}`]
+    .map((candidate) => path.resolve(__dirname, candidate))
+    .find((candidate) => fs.existsSync(candidate)) ??
+  path.resolve(__dirname, `../backend/.venv/${venvPython}`);
 const db = path.join(os.tmpdir(), `ecosort-e2e-${process.pid}.db`);
 
 export default defineConfig({

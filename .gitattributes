@@ -1,0 +1,2 @@
+# Windows batch files break with Unix line endings.
+*.bat text eol=crlf

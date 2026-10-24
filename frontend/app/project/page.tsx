@@ -98,20 +98,20 @@ export default async function ProjectPage() {
 
         <section className={styles.section} aria-labelledby="what">
           <h2 id="what" className={styles.h2}>
-            What it does and why it runs on the device
+            What it does and how it works
           </h2>
           <p className={styles.prose}>
-            EcoSort Edge sorts single items of waste into recyclable or trash. An Arduino Nano 33
-            BLE Sense Lite waits for an infrared sensor to see an object, takes a frame with its
-            OV7675 camera, and classifies it on the microcontroller as a can, a glass bottle, a pen
-            or a phone case. A lookup table, not the model, decides which bin each item goes in:
-            cans and glass bottles are recyclable, pens and phone cases are trash.
+            EcoSort Edge sorts single items of waste into recyclable or non-recyclable. An OV7675
+            camera on an Arduino streams grayscale frames to the laptop over USB. A small neural
+            network trained on our own photos labels each frame, and when an item is placed in view
+            it is counted once, in the matching bin. A lookup table on the server, not the model,
+            decides which bin a label belongs to.
           </p>
           <p className={styles.prose}>
-            Classifying on the board means no image has to leave it, no network is needed, and the
-            answer never waits on a server. The laptop only listens: a small bridge reads the
-            Nano&rsquo;s USB serial output, checks it, stores every verdict with the frame the model
-            saw, and serves the console.
+            Everything runs on this one laptop with no network: the camera bridge reads the
+            board&rsquo;s USB stream and runs the model, the bridge checks each verdict, stores it
+            with the frame the model saw, and serves this console. The browser never adds to a
+            counter.
           </p>
         </section>
 
@@ -235,12 +235,14 @@ export default async function ProjectPage() {
           </h2>
           <ul className={styles.list}>
             <li>
-              We know four items. Anything else is forced into one of them, or reported as unsure
-              when the score is low; the model cannot say &ldquo;this is something new&rdquo;.
+              The model has two answers, recyclable and non-recyclable. Anything else is forced into
+              one of them, or reported as unsure when the score is low; it cannot say &ldquo;this is
+              something new&rdquo;. It has no &ldquo;empty&rdquo; answer either, so an empty view is
+              recognised by comparing it with the empty background.
             </li>
             <li>
-              At 96 by 96 pixels a pen is only a few pixels wide, so how it lies under the camera
-              matters more than for the other items.
+              The camera is 160 by 120 pixels and grayscale, so thin or small objects are only a few
+              pixels wide and how an object lies in front of the camera matters.
             </li>
             <li>
               Glass is hard in grayscale: a clear bottle is mostly reflections and the background
@@ -251,11 +253,13 @@ export default async function ProjectPage() {
               images, so the test accuracy says little about a different bin, light or angle.
             </li>
             <li>
-              The counts assume the firmware&rsquo;s debounce holds, one object for one trigger. An
-              object that lingers or bounces could be counted twice.
+              An item is counted when the view changes from the empty background and the
+              model&rsquo;s answer settles, and not again until the view is empty. Start the camera
+              bridge with an empty view, and clear the view between items: two items placed one
+              straight after the other count as one.
             </li>
             <li>
-              The console shows the 96 by 96 grayscale frame the model reads, not full-resolution
+              The console shows the 160 by 120 grayscale frame the model reads, not full-resolution
               video.
             </li>
           </ul>
@@ -266,17 +270,9 @@ export default async function ProjectPage() {
             Wiring and parts
           </h2>
           <ul className={styles.list}>
-            <li>Arduino Nano 33 BLE Sense Lite</li>
-            <li>OV7675 camera module</li>
-            <li>
-              Infrared proximity sensor
-              {m.ir_sensor ? `: ${m.ir_sensor}` : ' (model not recorded yet)'}
-            </li>
+            <li>Arduino board streaming the camera, with the OV7675 camera module</li>
             <li>USB data cable to the laptop (a charge-only cable carries no data)</li>
-            <li>
-              ESP32, optional: receives a text copy of the EVT lines on the Nano&rsquo;s Serial1 for
-              a separate wireless dashboard. This console does not need it.
-            </li>
+            <li>A laptop to run the model, the bridge and this console</li>
           </ul>
           {m.wiring === null ? (
             <p className={styles.prose}>

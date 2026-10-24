@@ -37,13 +37,13 @@ function FrameDialog({
           <h2 id="frame-title" className={panel.title}>
             {name} at {clockTime(event.ts)}
           </h2>
-          {/* eslint-disable-next-line @next/next/no-img-element -- a stored 96x96 PNG at 4x */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- a stored PNG, enlarged */}
           <img
             className={`${panel.frame} ${styles.bigFrame}`}
             src={urls.frame(event.id)}
             width={384}
             height={384}
-            alt={`The 96 by 96 frame the model classified as ${name.toLowerCase()}, enlarged four times`}
+            alt={`The frame the model classified as ${name.toLowerCase()}, enlarged`}
           />
           <dl className={styles.facts}>
             <dt>Bin</dt>
@@ -51,7 +51,7 @@ function FrameDialog({
             <dt>Confidence</dt>
             <dd>{percent(event.confidence)}</dd>
             <dt>Inference</dt>
-            <dd>{event.latency_ms} ms on the Nano</dd>
+            <dd>{event.latency_ms} ms for the model</dd>
             <dt>Received</dt>
             <dd>{event.ts} (UTC, bridge clock)</dd>
             <dt>Event</dt>
@@ -138,7 +138,7 @@ export function EventLog({
                           onClick={() => setOpen(event)}
                           aria-label={`Show the frame for ${name} at ${clockTime(event.ts)}`}
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element -- a stored 96x96 PNG */}
+                          {/* eslint-disable-next-line @next/next/no-img-element -- a stored PNG */}
                           <img
                             className={`${panel.frame} ${styles.thumb}`}
                             src={urls.frame(event.id)}

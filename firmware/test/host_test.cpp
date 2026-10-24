@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
   // Port closed: nothing at all is sent, not even HELLO.
   ecosort::tick(0);
   ecosort::debugf("lost\n");
-  ecosort::send_event("can", 0.9f, 400);
+  ecosort::send_event("recyclable", 0.9f, 400);
   CHECK(Serial.out.empty());
 
   // The host opens the port.
@@ -70,10 +70,10 @@ int main(int argc, char **argv) {
   ei_printf("Predictions: ");                          // unfinished DBG line...
   ei_printf_float(-0.25f);
   ecosort::send_frame(ecosort::VERDICT, 96, 96, ecosort::read_gray_buffer, frame);
-  ecosort::send_event("glass_bottle", 0.944f, 412);   // EVT,glass_bottle,0.94,RECYCLABLE,412
+  ecosort::send_event("recyclable", 0.944f, 412);     // EVT,recyclable,0.94,RECYCLABLE,412
   ecosort::send_event("uncertain", 0.41f, 408);       // EVT,uncertain,0.41,NONE,408
-  ecosort::send_event("pen", 0.999f, 1234567);        // confidence 1.00, latency capped
-  ecosort::send_event("phone_case", -1.0f, 0);        // confidence 0.00
+  ecosort::send_event("trash", 0.999f, 1234567);      // confidence 1.00, latency capped
+  ecosort::send_event("trash", -1.0f, 0);             // confidence 0.00
   ecosort::tick(5010);                                 // HB,5010
 
   // Host commands: P1 starts previews, junk is ignored, P0 stops them.
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
   // The ESP32 mirror gets the EVT lines only, as text, whether or not a laptop has the USB
   // port open: the wireless dashboard works on its own.
   std::string mirror(Serial1.out.begin(), Serial1.out.end());
-  CHECK(mirror.find("EVT,can,0.90,RECYCLABLE,400\nEVT,glass_bottle,0.94,RECYCLABLE,412\n") == 0);
+  CHECK(mirror.find("EVT,recyclable,0.90,RECYCLABLE,400\nEVT,recyclable,0.94,RECYCLABLE,412\n") == 0);
   CHECK(mirror.find('\xEC') == std::string::npos);
   CHECK(mirror.find("DBG") == std::string::npos);
 

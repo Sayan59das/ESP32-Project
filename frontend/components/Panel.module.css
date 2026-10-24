@@ -33,6 +33,7 @@
 
 .frame {
   flex: none;
+  object-fit: contain;
   image-rendering: pixelated;
   background: var(--video-bed);
 }

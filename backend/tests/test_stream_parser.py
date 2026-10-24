@@ -17,8 +17,8 @@ from app.protocol import (
 )
 from tests.helpers import FakeClock
 
-EVT_CAN = b"EVT,can,0.94,RECYCLABLE,412\n"
-CAN_EVENT = EventLine("can", 0.94, "RECYCLABLE", 412)
+EVT_CAN = b"EVT,recyclable,0.94,RECYCLABLE,412\n"
+CAN_EVENT = EventLine("recyclable", 0.94, "RECYCLABLE", 412)
 
 
 def packet(kind: int = KIND_VERDICT, fill: int = 5, size: int = 96) -> bytes:
@@ -66,7 +66,7 @@ class TestText:
     def test_bad_lines_are_rejected_and_the_next_one_still_parses(
         self, parser: StreamParser
     ) -> None:
-        items = parser.feed(b"nonsense\nEVT,can,9.99,TRASH,1\n" + EVT_CAN)
+        items = parser.feed(b"nonsense\nEVT,recyclable,9.99,TRASH,1\n" + EVT_CAN)
         assert [type(item) for item in items] == [Rejected, Rejected, EventLine]
 
     def test_oversize_line_is_dropped_once_and_resyncs_at_the_newline(

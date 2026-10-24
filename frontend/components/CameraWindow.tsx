@@ -255,13 +255,13 @@ export function CameraWindow({
             key={connection}
             className={feedFailed ? `${styles.feed} ${styles.feedHidden}` : styles.feed}
             src={`${urls.camera}?connection=${connection}`}
-            alt="Live classifier view: the 96 by 96 grayscale frame from the OV7675, enlarged"
+            alt="Live classifier view: the grayscale frame from the camera, enlarged"
             onError={() => setFeedFailed(true)}
           />
         ) : null}
         {source === 'webcam' ? <Webcam onStatus={setWebcamStatus} /> : null}
         {verdict !== null && source === 'classifier' && verdict.has_frame ? (
-          // eslint-disable-next-line @next/next/no-img-element -- a stored 96x96 PNG, drawn pixelated
+          // eslint-disable-next-line @next/next/no-img-element -- a stored PNG, drawn pixelated
           <img
             className={styles.feed}
             src={urls.frame(verdict.id)}

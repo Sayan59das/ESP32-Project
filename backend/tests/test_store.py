@@ -16,7 +16,7 @@ class TestRuns:
 
     def test_ensure_run_resumes_an_open_run_of_the_same_source(self, store: Store) -> None:
         first = store.ensure_run("sim")
-        add(store, first.id, "can", "recyclable")
+        add(store, first.id, "recyclable", "recyclable")
         assert store.ensure_run("sim") == first
         assert store.counts(first.id).recyclable == 1
 
@@ -50,10 +50,10 @@ class TestCounting:
     def test_recyclable_and_trash_are_counted_by_bin(self, store: Store) -> None:
         run = store.ensure_run("sim")
         for label, bin_name in [
-            ("can", "recyclable"),
-            ("glass_bottle", "recyclable"),
-            ("can", "recyclable"),
-            ("pen", "trash"),
+            ("recyclable", "recyclable"),
+            ("recyclable", "recyclable"),
+            ("recyclable", "recyclable"),
+            ("trash", "trash"),
         ]:
             add(store, run.id, label, bin_name)
         counts = store.counts(run.id)
@@ -62,7 +62,7 @@ class TestCounting:
 
     def test_unsure_is_reported_separately_and_never_added_to_a_bin(self, store: Store) -> None:
         run = store.ensure_run("sim")
-        add(store, run.id, "can", "recyclable")
+        add(store, run.id, "recyclable", "recyclable")
         add(store, run.id, "uncertain", "unsure")
         add(store, run.id, "uncertain", "unsure")
         counts = store.counts(run.id)
@@ -75,34 +75,30 @@ class TestCounting:
         add(store, run.id, "uncertain", "unsure")
         assert store.counts(run.id).recycle_rate is None
 
-    def test_by_item_always_lists_all_four_items_with_zeros(self, store: Store) -> None:
+    def test_by_item_always_lists_every_item_with_zeros(self, store: Store) -> None:
         run = store.ensure_run("sim")
         assert [(i.label, i.display_name, i.bin, i.count) for i in store.by_item(run.id)] == [
-            ("can", "Can", "recyclable", 0),
-            ("glass_bottle", "Glass bottle", "recyclable", 0),
-            ("pen", "Pen", "trash", 0),
-            ("phone_case", "Phone case", "trash", 0),
+            ("recyclable", "Recyclable", "recyclable", 0),
+            ("trash", "Non-recyclable", "trash", 0),
         ]
 
     def test_by_item_counts_each_label_and_skips_unsure(self, store: Store) -> None:
         run = store.ensure_run("sim")
-        add(store, run.id, "pen", "trash")
-        add(store, run.id, "pen", "trash")
-        add(store, run.id, "can", "recyclable")
+        add(store, run.id, "trash", "trash")
+        add(store, run.id, "trash", "trash")
+        add(store, run.id, "recyclable", "recyclable")
         add(store, run.id, "uncertain", "unsure")
         assert {i.label: i.count for i in store.by_item(run.id)} == {
-            "can": 1,
-            "glass_bottle": 0,
-            "pen": 2,
-            "phone_case": 0,
+            "recyclable": 1,
+            "trash": 2,
         }
 
 
 class TestNewRun:
     def test_a_new_run_zeroes_counts_without_deleting_events(self, store: Store) -> None:
         old = store.ensure_run("sim")
-        add(store, old.id, "can", "recyclable")
-        add(store, old.id, "pen", "trash")
+        add(store, old.id, "recyclable", "recyclable")
+        add(store, old.id, "trash", "trash")
         new = store.start_new_run("sim")
         assert new.id != old.id
         assert store.current_run() == new
@@ -121,25 +117,25 @@ class TestNewRun:
 class TestEvents:
     def test_events_are_stamped_with_the_server_time_and_the_run_source(self, store: Store) -> None:
         run = store.ensure_run("replay")
-        event = add(store, run.id, "can", "recyclable")
+        event = add(store, run.id, "recyclable", "recyclable")
         assert event.ts.endswith("Z")
         assert (event.run_id, event.source, event.has_frame) == (run.id, "replay", False)
 
     def test_recent_events_are_newest_first_and_page_with_before_id(self, store: Store) -> None:
         run = store.ensure_run("sim")
-        ids = [add(store, run.id, "can", "recyclable").id for _ in range(5)]
+        ids = [add(store, run.id, "recyclable", "recyclable").id for _ in range(5)]
         assert [e.id for e in store.recent_events(run.id, limit=3)] == ids[::-1][:3]
         assert [e.id for e in store.recent_events(run.id, 10, before_id=ids[2])] == [ids[1], ids[0]]
 
     def test_recent_events_stay_inside_their_run(self, store: Store) -> None:
         old = store.ensure_run("sim")
-        add(store, old.id, "can", "recyclable")
+        add(store, old.id, "recyclable", "recyclable")
         new = store.start_new_run("sim")
         assert store.recent_events(new.id) == []
 
     def test_events_after_returns_oldest_first_for_resume(self, store: Store) -> None:
         run = store.ensure_run("sim")
-        ids = [add(store, run.id, "can", "recyclable").id for _ in range(4)]
+        ids = [add(store, run.id, "recyclable", "recyclable").id for _ in range(4)]
         assert [e.id for e in store.events_after(run.id, ids[0])] == ids[1:]
         assert store.events_after(run.id, ids[-1]) == []
 
@@ -147,7 +143,7 @@ class TestEvents:
 class TestFrames:
     def test_a_frame_is_stored_with_its_event_and_read_back_exactly(self, store: Store) -> None:
         run = store.ensure_run("sim")
-        event = add(store, run.id, "can", "recyclable", FRAME)
+        event = add(store, run.id, "recyclable", "recyclable", FRAME)
         assert event.has_frame is True
         stored = store.get_frame(event.id)
         assert stored is not None
@@ -155,33 +151,33 @@ class TestFrames:
 
     def test_an_event_without_a_frame_says_so(self, store: Store) -> None:
         run = store.ensure_run("sim")
-        event = add(store, run.id, "can", "recyclable")
+        event = add(store, run.id, "recyclable", "recyclable")
         assert event.has_frame is False
         assert store.get_frame(event.id) is None
         assert store.get_frame(9999) is None
 
     def test_has_frame_survives_queries_and_export(self, store: Store) -> None:
         run = store.ensure_run("sim")
-        with_frame = add(store, run.id, "can", "recyclable", FRAME)
-        add(store, run.id, "pen", "trash")
+        with_frame = add(store, run.id, "recyclable", "recyclable", FRAME)
+        add(store, run.id, "trash", "trash")
         by_id = {e.id: e.has_frame for e in store.recent_events(run.id)}
         assert by_id[with_frame.id] is True
         assert [row[-1] for row in store.export_rows()] == [True, False]
 
     def test_a_new_run_keeps_the_old_runs_frames(self, store: Store) -> None:
         old = store.ensure_run("sim")
-        event = add(store, old.id, "can", "recyclable", FRAME)
+        event = add(store, old.id, "recyclable", "recyclable", FRAME)
         store.start_new_run("sim")
         assert store.get_frame(event.id) is not None
 
 
 def test_export_rows_cover_every_run_in_order(store: Store) -> None:
     sim = store.ensure_run("sim")
-    add(store, sim.id, "can", "recyclable")
+    add(store, sim.id, "recyclable", "recyclable")
     serial = store.ensure_run("serial")
-    add(store, serial.id, "pen", "trash")
+    add(store, serial.id, "trash", "trash")
     rows = store.export_rows()
     assert [(r[0], r[2], r[3], r[6]) for r in rows] == [
-        (sim.id, "can", "recyclable", "sim"),
-        (serial.id, "pen", "trash", "serial"),
+        (sim.id, "recyclable", "recyclable", "sim"),
+        (serial.id, "trash", "trash", "serial"),
     ]

@@ -11,24 +11,24 @@ interface Step {
 
 const RIG: Step[] = [
   {
-    title: 'IR sensor',
-    lines: ['An object breaks the infrared beam.', 'One trigger, one classification.'],
-  },
-  {
     title: 'OV7675 camera',
-    lines: ['The frame, reduced to the 96 by 96', 'grayscale image the model reads.'],
+    lines: ['Looks at the item and captures a 160 by 120', 'grayscale frame, over and over.'],
   },
   {
-    title: 'Classifier on the Nano',
-    lines: [
-      'Runs on the nRF52840: can, glass',
-      'bottle, pen or phone case. Low scores',
-      'are reported as unsure.',
-    ],
+    title: 'Arduino board',
+    lines: ['Does no classifying. It streams every', 'frame over USB as fast as the cable allows.'],
   },
 ];
 
 const LAPTOP: Step[] = [
+  {
+    title: 'Camera bridge (the trained model)',
+    lines: [
+      'A small neural network labels each frame.',
+      'When an item arrives it counts it once:',
+      'recyclable, non-recyclable or unsure.',
+    ],
+  },
   {
     title: 'Bridge (FastAPI)',
     lines: [
@@ -37,7 +37,7 @@ const LAPTOP: Step[] = [
       'event with the frame the model saw.',
     ],
   },
-  { title: 'Console', lines: ['Counts by bin, and every verdict’s frame.'] },
+  { title: 'Console', lines: ['Counts by bin, and every verdict�s frame.'] },
 ];
 
 const WIDTH = 360;
@@ -98,7 +98,7 @@ function group(label: string, steps: Step[], top: number, keyPrefix: string) {
 }
 
 export function FlowDiagram() {
-  const rig = group('On the rig: Nano 33 BLE Sense Lite', RIG, 0, 'rig');
+  const rig = group('On the rig: Arduino and camera', RIG, 0, 'rig');
   const usbTop = rig.bottom;
   const usbBottom = usbTop + 112;
   const laptop = group('On the laptop', LAPTOP, usbBottom, 'laptop');
@@ -114,29 +114,30 @@ export function FlowDiagram() {
       >
         <title id="flow-title">How one item gets sorted</title>
         <desc id="flow-desc">
-          The IR sensor triggers the OV7675 camera; the classifier on the Nano labels the 96 by 96
-          frame; the Nano sends the verdict frame and then an EVT line over USB serial; the bridge
-          checks and stores them; the console shows the counts and the frame.
+          The OV7675 camera and the Arduino stream grayscale frames over USB; the camera bridge on
+          the laptop runs the trained model, counts each item once and passes the verdict frame and
+          an EVT line to the bridge; the bridge checks and stores them; the console shows the counts
+          and the frame.
         </desc>
         {rig.node}
         <line className={styles.cable} x1={ARROW_X} y1={usbTop} x2={ARROW_X} y2={usbBottom} />
         <text className={styles.title} x={ARROW_X + 20} y={usbTop + 24}>
-          USB serial, one stream
+          USB serial, camera frames
         </text>
         <text className={styles.text} x={ARROW_X + 20} y={usbTop + 46}>
-          1. Verdict frame: EC A5 F0 5A, type 2,
+          FRM0 packets, 160 by 120,
         </text>
-        <text className={styles.text} x={ARROW_X + 34} y={usbTop + 64}>
-          96 by 96, 9216 pixels, CRC-16
+        <text className={styles.text} x={ARROW_X + 20} y={usbTop + 64}>
+          19200 grayscale pixels each
         </text>
         <text className={styles.code} x={ARROW_X + 20} y={usbTop + 90}>
-          2. EVT,glass_bottle,0.94,RECYCLABLE,412
+          EVT,recyclable,0.97,RECYCLABLE,70
         </text>
         {laptop.node}
       </svg>
       <figcaption className={styles.caption}>
-        The frame always travels just before its EVT line, so every verdict in the console comes
-        with the exact image the model classified.
+        The camera bridge sends the frame just before its EVT line, so every verdict in the console
+        comes with the exact image the model classified.
       </figcaption>
     </figure>
   );

@@ -1,23 +1,66 @@
 # EcoSort Edge
 
-EcoSort Edge is a TinyML waste classifier. An Arduino Nano 33 BLE Sense Lite with an
-OV7675 camera classifies each object on the microcontroller itself, as a can, a glass
-bottle, a pen or a phone case, and a lookup table puts it in the recyclable or the trash
-bin. The Nano reports each verdict, and the frame it classified, over USB serial. This
-repository holds the bridge that reads that stream and the operator console that shows
-what the classifier sees, with the running totals of recyclable and trash items directly
-beneath it.
+EcoSort Edge sorts items of waste into recyclable or non-recyclable. A camera board (an
+OV7675 camera on an Arduino) streams grayscale frames to the laptop over USB. A small neural
+network trained on our own photos (`Model/waste_cnn.pt`) labels each frame, and when an item is
+placed in view it is counted once, in the matching bin. This repository holds the camera
+bridge that runs the model, the bridge that stores and serves the results, and the operator
+console that shows what the classifier sees, with the running totals of recyclable and
+non-recyclable items directly beneath it.
 
 ```
-IR sensor -> Nano (capture + inference)
-    -> USB serial: text lines and binary frame packets, one stream
+camera board (OV7675): FRM0 grayscale frames, 160x120
+    -> USB serial
+    -> camera bridge (Model/camera_bridge.py): trained model, counts each item once
+    -> EcoSort wire contract on TCP port 7777: text lines and binary frame packets
     -> bridge (FastAPI): parse, validate, store in SQLite, count
-    -> SSE (numbers) + MJPEG (live 96x96 frames)
+    -> SSE (numbers) + MJPEG (live frames)
     -> console (Next.js) in the browser
 ```
 
 The bridge owns the truth: it recomputes every bin from its own table, keeps every event
 and frame, and computes every count. The browser never adds to a counter.
+
+## Run it with the camera (one click)
+
+```bat
+run_all.bat          start everything (stop_all.bat stops it)
+run_all.bat prod     the same, with the console as a production build
+run_all.bat check    only check that everything is ready
+```
+
+Plug the camera board in with a data USB cable, close the Arduino Serial Monitor and
+`live.py` (only one program can use the port), keep the camera view **empty**, and run
+`run_all.bat`. The first run creates the Python environment and installs the packages.
+Three windows open and the console opens at http://localhost:3000:
+
+1. **Camera bridge** reads the camera, runs the model and counts items. It finds the board
+   by USB vendor id; set `CAMERA_PORT=COM6` (and `CAMERA_BAUD`) at the top of `run_all.bat`
+   if you need to name it.
+2. **Website bridge** stores every verdict with its frame and serves the data.
+3. **Console** is the website.
+
+Put an item in front of the camera: its bin's count goes up by one, once, however long it
+stays. Take it away before the next one: the view must be empty in between. Window 1 says
+what happens (`calibrating`, `ready`, `item in view`, `counted: recyclable 0.98`). Add
+`--verbose` to its command to also see the scene-change value every 2 s, which is what to
+look at if items are not noticed or empty views count as items.
+
+How it counts: the model has two classes and no "empty" class, so it answers one or the
+other even when nothing is there. The camera bridge therefore watches the *scene*: it
+averages the first ~3 s (empty view) into a background and measures how far each frame is
+from it, ignoring overall brightness changes. When the picture differs, the model's answers
+are averaged until they settle, one verdict is produced, and nothing more is counted until
+the view matches the background again. A low-confidence answer is counted as unsure, in
+neither bin.
+
+The model runs without PyTorch (`Model/numpy_cnn.py` reads `waste_cnn.pt` and does the same
+arithmetic in numpy), so no torch install is needed to run the website. `python
+Model/camera_bridge.py --check` loads the model and classifies one training image.
+
+To try it without a board: `python scripts/fake_camera.py` streams scripted frames from
+`Model/dataset`, and `python Model/camera_bridge.py --camera socket://127.0.0.1:7778` reads
+them.
 
 ## Quick start (simulator)
 
@@ -90,7 +133,7 @@ with `0xEC`, which never appears in ASCII text, so the two cannot be confused.
 
 | Line | Meaning |
 | --- | --- |
-| `EVT,<label>,<confidence>,<bin>,<latency_ms>` | One classification. Label `can`, `glass_bottle`, `pen`, `phone_case` or `uncertain`; confidence `0.00` to `1.00`; bin `RECYCLABLE`, `TRASH` or `NONE`; latency is inference time on the Nano |
+| `EVT,<label>,<confidence>,<bin>,<latency_ms>` | One classification. Label `recyclable`, `trash` or `uncertain`; confidence `0.00` to `1.00`; bin `RECYCLABLE`, `TRASH` or `NONE`; latency is inference time on the Nano |
 | `HELLO,<firmware_version>` | Once per boot, when the host opens the port. A second one during a run means the Nano reset |
 | `HB,<uptime_ms>` | Every 5 s. The only proof the Nano is alive between events |
 | `DBG,<text>` | Debug text, ignored |
@@ -105,13 +148,13 @@ bridge's table, the bridge's bin is stored and the mismatch counted.
 | --- | --- | --- |
 | 0 | 4 | Magic `EC A5 F0 5A` |
 | 4 | 1 | Type: 1 preview, 2 verdict |
-| 5 | 2 | Width (96) |
-| 7 | 2 | Height (96) |
-| 9 | 4 | Payload length, width times height, at most 16384 |
+| 5 | 2 | Width (160 from the camera bridge) |
+| 7 | 2 | Height (120 from the camera bridge) |
+| 9 | 4 | Payload length, width times height, at most 32768 |
 | 13 | N | 8-bit grayscale pixels, row-major |
 | 13+N | 2 | CRC-16/CCITT-FALSE over bytes 4 to 13+N-1 |
 
-A 96x96 packet is 9231 bytes. The verdict frame comes immediately before its EVT line; the
+A 160x120 packet is 19215 bytes. The verdict frame comes immediately before its EVT line; the
 bridge attaches it to that event and discards it if no EVT follows within 3 s. Preview
 frames flow only while the console is open: the bridge sends `P1` when the first viewer
 connects and `P0` when the last one leaves, at most 5 frames per second.
@@ -148,21 +191,21 @@ malformed value renders "Not measured yet"; nothing is estimated.
 
 | Key | Shape |
 | --- | --- |
-| `test_images_per_class` | `{"can": 40, "glass_bottle": 38, "pen": 41, "phone_case": 40}` |
+| `test_images_per_class` | `{"recyclable": 20, "trash": 33}` |
 | `test_accuracy_per_class` | Same keys, fractions from 0 to 1 |
 | `overall_test_accuracy` | Fraction from 0 to 1 |
-| `latency_ms_p50`, `latency_ms_p95` | Milliseconds, inference on the Nano |
-| `ram_kb_peak`, `flash_kb` | Kilobytes |
+| `latency_ms_p50`, `latency_ms_p95` | Milliseconds, inference time for one frame |
+| `ram_kb_peak`, `flash_kb` | Kilobytes (only meaningful when classifying on a board) |
 | `model_input`, `model_architecture`, `dataset_notes` | Text |
-| `confusion_matrix` | `{"labels": ["can", ...], "rows": [[...], ...]}`, rows are the true item |
-| `ir_sensor` | Text: the sensor's model |
-| `wiring` | `[{"from": "IR sensor OUT", "to": "Nano D2", "note": "..."}]` |
+| `confusion_matrix` | `{"labels": ["recyclable", "trash"], "rows": [[...], ...]}`, rows are the true item |
+| `ir_sensor` | Text: the sensor's model (only when a board with a trigger sensor is used) |
+| `wiring` | `[{"from": "camera USB", "to": "laptop", "note": "..."}]` |
 | `datasets`, `credits` | `[{"name": "...", "licence": "...", "url": "..."}]` |
 
 ## Tests
 
 ```sh
-make test     # 274 backend tests, including parser fuzzing and a firmware contract test
+make test     # about 300 backend tests, including parser fuzzing and a firmware contract test
 make e2e      # 16 browser tests against the simulator
 make lint
 ```
@@ -179,12 +222,15 @@ Measured on this build: Lighthouse accessibility 100 on `/` and 100 on `/project
 
 ## What this does not do
 
-- It does not stream full-resolution video, only the 96 by 96 grayscale frame the model
+- It does not stream full-resolution video, only the 160 by 120 grayscale frame the model
   sees.
-- It does not train models.
-- Counts assume the firmware's IR debounce holds: one object, one trigger.
-- Inference time is measured on the Nano for the classifier alone; it is not the time from
-  an object arriving to its count changing on screen.
+- It does not train models (`Model/train.py` does).
+- Counts assume a clear view between items, and an empty view when the camera bridge
+  starts. Two items placed one straight after the other count as one. Its trigger levels
+  adapt to the camera's noise but have not been tuned on real footage.
+- The model knows two answers. It cannot say "this is something new".
+- Inference time is the model on the laptop for one frame; it is not the time from an
+  object arriving to its count changing on screen.
 
 ## Layout
 
@@ -192,7 +238,10 @@ Measured on this build: Lighthouse accessibility 100 on `/` and 100 on `/project
 backend/app/        FastAPI bridge: protocol parser, frames, store, hub, sources, routes
 backend/tests/      pytest suite
 frontend/           Next.js console: app/, components/, lib/, styles/, e2e/
-firmware/           ecosort_io.h for the Nano, its integration guide and host test
-scripts/            check_contrast.py, export_openapi.py, fake_nano.py, record.py
+Model/              the trained model and the camera bridge: camera_bridge.py, numpy_cnn.py,
+                    presence.py, plus train.py, live.py and the dataset
+firmware/           ecosort_io.h for classifying on a Nano instead, its guide and host test
+scripts/            check_contrast.py, export_openapi.py, fake_nano.py, fake_camera.py, record.py
+run_all.bat         starts everything; stop_all.bat stops it
 data/               metrics.json for /project, sample_session.rec for replay
 ```

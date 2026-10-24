@@ -33,7 +33,7 @@ export function LastVerdict({
       ) : (
         <div className={styles.verdict}>
           {event.has_frame ? (
-            // eslint-disable-next-line @next/next/no-img-element -- a stored 96x96 PNG, drawn pixelated
+            // eslint-disable-next-line @next/next/no-img-element -- a stored PNG, drawn pixelated
             <img
               className={panel.frame}
               src={urls.frame(event.id)}

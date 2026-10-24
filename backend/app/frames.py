@@ -5,7 +5,7 @@ Packet (little-endian):
     4   1  type: 1 preview, 2 verdict
     5   2  width
     7   2  height
-    9   4  payload length, must equal width * height, at most 16384
+    9   4  payload length, must equal width * height, at most 32768
     13  N  8-bit grayscale, row-major
     13+N 2 CRC-16/CCITT-FALSE over bytes 4 .. 13+N-1
 
@@ -23,7 +23,7 @@ KIND_PREVIEW = 1
 KIND_VERDICT = 2
 HEADER_LEN = 9
 CRC_LEN = 2
-MAX_PAYLOAD = 16384
+MAX_PAYLOAD = 32768
 VERDICT_TTL_S = 3.0
 JPEG_QUALITY = 92
 
@@ -87,7 +87,7 @@ def parse_header(raw: bytes) -> FrameHeader | str:
 def encode_packet(kind: int, width: int, height: int, pixels: bytes) -> bytes:
     """Build a wire packet. Used by the simulator, the fake Nano and the tests."""
     if len(pixels) != width * height or len(pixels) > MAX_PAYLOAD:
-        raise ValueError("pixel count must equal width * height and fit in 16384 bytes")
+        raise ValueError("pixel count must equal width * height and fit in 32768 bytes")
     body = (
         bytes([kind])
         + width.to_bytes(2, "little")

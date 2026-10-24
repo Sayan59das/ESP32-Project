@@ -1,0 +1,82 @@
+ECOSORT EDGE - MODEL TECH STACK
+===============================
+
+WHAT THE MODEL DOES
+  Looks at one grayscale camera frame and answers: recyclable or non_recyclable.
+  A lookup table on the website decides the bin (recyclable -> Recyclable count,
+  non_recyclable -> Trash count). The model itself never picks a bin.
+
+MODEL
+  Architecture ....... SmallCNN, a small convolutional neural network (Model/model.py)
+  Input .............. 1 x 120 x 160 (grayscale, height x width)
+  Preprocessing ...... pixel / 255, then (x - 0.5) / 0.25
+  Layers ............. 4 blocks, each:
+                         Conv 3x3 -> BatchNorm -> ReLU
+                         Conv 3x3 -> BatchNorm -> ReLU
+                         MaxPool 2x2
+                       channels 1 -> 16 -> 32 -> 64 -> 128
+                       then global average pool -> Dropout 0.3 -> Linear 128 -> 2
+  Output ............. 2 scores -> softmax -> probability per class
+  Classes ............ recyclable, non_recyclable (no "empty scene" class)
+  Size ............... 293,970 trainable parameters, 1.1 MB file (waste_cnn.pt)
+  Weights ............ trained from scratch (no pretrained backbone)
+
+CAMERA AND DATA
+  Camera ............. OV7675 on an Arduino board
+  Frames ............. 160 x 120 grayscale, streamed over USB serial (921600 baud)
+  Stream format ...... "FRM0" + width (2 bytes) + height (2 bytes) + pixel bytes
+  Dataset ............ 269 frames captured with Model/capture.py (OpenCV):
+                         recyclable 104, non_recyclable 165
+  Validation split ... 20% of each class, fixed seed 0 (20 + 33 = 53 frames)
+
+TRAINING (Model/train.py)
+  Framework .......... PyTorch, torchvision transforms
+  Evaluation ......... scikit-learn (classification report, confusion matrix),
+                       matplotlib (training_curves.png, confusion_matrix.png)
+  Hardware ........... NVIDIA GPU (CUDA) when available, otherwise CPU
+  Optimiser .......... AdamW, learning rate 1e-3, weight decay 1e-4
+  Schedule ........... cosine annealing, 40 epochs, batch size 32
+  Loss ............... cross-entropy, class-weighted, label smoothing 0.05
+  Augmentation ....... random affine (rotate 10 deg, shift 12%, scale 0.85-1.15,
+                       shear 5), horizontal flip, brightness and contrast jitter
+                       (0.4), random erasing (25% of frames)
+  Model selection .... best validation accuracy
+  Result ............. validation accuracy 100% (20/20 recyclable, 33/33
+                       non_recyclable). The validation frames come from the same
+                       capture sessions as the training frames, so this is
+                       optimistic for a new bin, light or angle.
+
+RUNNING THE MODEL FOR THE WEBSITE (no PyTorch needed)
+  Inference .......... Model/numpy_cnn.py: reads waste_cnn.pt directly and does
+                       the same arithmetic in NumPy (BatchNorm folded into the
+                       convolutions, convolutions as matrix multiplications)
+  Why not PyTorch .... Windows Application Control blocks torch_python.dll on the
+                       development PC. The NumPy version matches the trained
+                       model (same 20/20 and 33/33 on the validation split).
+  Safety ............. the checkpoint is read with a restricted unpickler that
+                       allows only the few types a state dict needs
+  Speed .............. about 40 ms per frame on a laptop CPU
+  Counting rule ...... Model/presence.py: because the model has no "empty" class,
+                       an item is counted when the picture differs from the empty
+                       background and the model's average answer settles, once,
+                       until the view is empty again. Answers below 60%
+                       confidence count as "uncertain" (in neither bin).
+  Camera bridge ...... Model/camera_bridge.py: Python asyncio, pyserial (camera
+                       port), Pillow, NumPy. Serves results on TCP port 7777.
+
+REST OF THE SYSTEM
+  Website bridge ..... FastAPI + uvicorn, SQLite storage, live updates over
+                       Server-Sent Events, camera view as MJPEG
+  Console ............ Next.js 14, React 18, TypeScript
+  Tests .............. pytest (backend and camera path), Vitest (console logic),
+                       Playwright with axe (end-to-end and accessibility)
+  Python ............. 3.12 virtual environment (.venv), NumPy 2.x
+  Launcher ........... run_all.bat (start everything), stop_all.bat (stop)
+
+KNOWN LIMITS
+  - Two answers only. It cannot say "this is something new".
+  - Small dataset (269 frames) from one camera setup.
+  - The counting trigger levels adapt to the camera's noise but had not been
+    tested on the real camera when this file was written.
+  - Frames are 160 x 120 grayscale, so thin or small objects are only a few
+    pixels wide.

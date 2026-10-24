@@ -1,0 +1,6 @@
+# What the website needs from Model/ to run the trained model: numpy only (numpy_cnn.py reads
+# waste_cnn.pt without PyTorch). pyserial and Pillow come from backend/requirements.txt.
+#
+# Training and the live.py viewer need more: torch, torchvision, opencv-python, scikit-learn
+# and matplotlib. Install those in your own training environment; the website does not use them.
+numpy>=2.0,<3

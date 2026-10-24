@@ -4,7 +4,7 @@ test('the project page renders every section and marks unmeasured values', async
   await page.goto('/project');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('How EcoSort Edge works');
   for (const name of [
-    'What it does and why it runs on the device',
+    'What it does and how it works',
     'How one item gets sorted',
     'Results',
     'Confusion matrix',

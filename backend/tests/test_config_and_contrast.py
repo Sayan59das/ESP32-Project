@@ -53,27 +53,25 @@ class TestSettings:
 class TestClasses:
     def test_the_item_to_bin_table(self) -> None:
         assert {item.label: item.bin for item in ITEMS} == {
-            "can": "recyclable",
-            "glass_bottle": "recyclable",
-            "pen": "trash",
-            "phone_case": "trash",
+            "recyclable": "recyclable",
+            "trash": "trash",
         }
 
     def test_stored_bins(self) -> None:
-        assert stored_bin("can") == "recyclable"
-        assert stored_bin("pen") == "trash"
+        assert stored_bin("recyclable") == "recyclable"
+        assert stored_bin("trash") == "trash"
         assert stored_bin("uncertain") == "unsure"
         assert stored_bin("background") is None
         assert stored_bin("unicorn") is None
 
     def test_expected_firmware_bin_is_none_for_everything_unsorted(self) -> None:
-        assert expected_firmware_bin("glass_bottle") == "RECYCLABLE"
-        assert expected_firmware_bin("phone_case") == "TRASH"
+        assert expected_firmware_bin("recyclable") == "RECYCLABLE"
+        assert expected_firmware_bin("trash") == "TRASH"
         assert expected_firmware_bin("uncertain") == "NONE"
         assert expected_firmware_bin("background") == "NONE"
 
     def test_item_for_unknown_labels(self) -> None:
-        assert item_for("pen") is not None
+        assert item_for("trash") is not None
         assert item_for("uncertain") is None
 
 

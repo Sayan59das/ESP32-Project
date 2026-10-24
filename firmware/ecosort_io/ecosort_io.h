@@ -47,7 +47,7 @@ const size_t DBG_TEXT = MAX_LINE - 4;     // room left after "DBG,"
 const uint32_t HEARTBEAT_MS = 5000;
 const uint32_t PREVIEW_INTERVAL_MS = 200; // at most 5 preview frames per second
 const size_t CHUNK = 64;
-const uint32_t MAX_PAYLOAD = 16384;
+const uint32_t MAX_PAYLOAD = 32768;
 
 // Called by send_frame for each chunk: fill out[0..count) with 8-bit gray pixels starting
 // at pixel `offset` (row-major) of the frame the model sees.
@@ -140,8 +140,8 @@ inline void send_heartbeat(uint32_t uptime_ms) {
 // The lookup table, not the model, decides the bin. The bridge recomputes it from its own
 // table and counts any disagreement.
 inline const char *bin_for(const char *label) {
-  if (strcmp(label, "can") == 0 || strcmp(label, "glass_bottle") == 0) return "RECYCLABLE";
-  if (strcmp(label, "pen") == 0 || strcmp(label, "phone_case") == 0) return "TRASH";
+  if (strcmp(label, "recyclable") == 0) return "RECYCLABLE";
+  if (strcmp(label, "trash") == 0) return "TRASH";
   return "NONE";
 }
 

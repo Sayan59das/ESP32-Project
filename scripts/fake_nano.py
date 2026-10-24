@@ -130,18 +130,18 @@ class FakeNano:
         if fault == "corrupt_crc":
             packet = bytearray(
                 encode_packet(
-                    KIND_VERDICT, FRAME_SIZE, FRAME_SIZE, synthetic_frame("can", self._rng)
+                    KIND_VERDICT, FRAME_SIZE, FRAME_SIZE, synthetic_frame("recyclable", self._rng)
                 )
             )
             packet[-1] ^= 0xFF
-            await self.send(bytes(packet) + b"EVT,can,0.91,RECYCLABLE,402\n")
+            await self.send(bytes(packet) + b"EVT,recyclable,0.91,RECYCLABLE,402\n")
         elif fault == "oversize_line":
             await self.send(b"DBG," + b"x" * 100 + b"\n")
         elif fault == "garbage_line":
             await self.send(b"Predictions (DSP: 5 ms.):\n")
         elif fault == "stalled_packet":
             packet = encode_packet(
-                KIND_PREVIEW, FRAME_SIZE, FRAME_SIZE, synthetic_frame("pen", self._rng)
+                KIND_PREVIEW, FRAME_SIZE, FRAME_SIZE, synthetic_frame("trash", self._rng)
             )
             async with self._lock:
                 await self._write(packet[: len(packet) // 2])
@@ -153,7 +153,7 @@ class FakeNano:
         elif fault == "background":
             await self._classify("background", 0.97, "NONE")
         elif fault == "bin_mismatch":
-            await self._classify("pen", 0.88, "RECYCLABLE")
+            await self._classify("trash", 0.88, "RECYCLABLE")
 
 
 async def serve_tcp(port: int, args: argparse.Namespace) -> None:

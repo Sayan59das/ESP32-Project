@@ -16,11 +16,11 @@ from tests.helpers import FakeClock, IdleSource, evt, preview_packet, tiny_frame
 class TestIngest:
     def test_an_event_is_stored_published_and_counted(self, supervisor: Supervisor) -> None:
         with supervisor.hub.subscribe() as sub:
-            supervisor.ingest_bytes(evt("can", "RECYCLABLE", "0.94", 412))
+            supervisor.ingest_bytes(evt("recyclable", "RECYCLABLE", "0.94", 412))
             message = sub._queue.get_nowait()
         assert isinstance(message, EventMsg)
         assert (message.event.label, message.event.bin, message.event.latency_ms) == (
-            "can",
+            "recyclable",
             "recyclable",
             412,
         )
@@ -29,7 +29,7 @@ class TestIngest:
         assert state.last_event == message.event
 
     def test_the_server_decides_the_bin_and_counts_a_mismatch(self, supervisor: Supervisor) -> None:
-        supervisor.ingest_bytes(evt("pen", "RECYCLABLE"))  # firmware disagrees with the table
+        supervisor.ingest_bytes(evt("trash", "RECYCLABLE"))  # firmware disagrees with the table
         state = supervisor.get_state()
         assert state.last_event is not None
         assert state.last_event.bin == "trash"
@@ -37,7 +37,7 @@ class TestIngest:
         assert state.link.bin_mismatch == 1
 
     def test_agreeing_firmware_is_not_a_mismatch(self, supervisor: Supervisor) -> None:
-        supervisor.ingest_bytes(evt("glass_bottle", "RECYCLABLE") + evt("phone_case", "TRASH"))
+        supervisor.ingest_bytes(evt("recyclable", "RECYCLABLE") + evt("trash", "TRASH"))
         assert supervisor.get_state().link.bin_mismatch == 0
 
     def test_uncertain_is_stored_as_unsure_and_added_to_neither_total(
@@ -70,7 +70,9 @@ class TestIngest:
     def test_bad_lines_are_dropped_and_counted_but_good_ones_still_land(
         self, supervisor: Supervisor
     ) -> None:
-        supervisor.ingest_bytes(b"nonsense\nEVT,can,9.99,RECYCLABLE,1\n" + evt("pen", "TRASH"))
+        supervisor.ingest_bytes(
+            b"nonsense\nEVT,recyclable,9.99,RECYCLABLE,1\n" + evt("trash", "TRASH")
+        )
         state = supervisor.get_state()
         assert state.link.dropped_lines == 2
         assert state.counts.trash == 1
@@ -89,7 +91,7 @@ class TestIngest:
         assert supervisor.get_state().link.last_heartbeat_age_s is None
         supervisor.ingest_bytes(b"HB,5000\n")
         clock.advance(7)
-        supervisor.ingest_bytes(b"DBG,still here\n" + evt("can", "RECYCLABLE"))
+        supervisor.ingest_bytes(b"DBG,still here\n" + evt("recyclable", "RECYCLABLE"))
         link = supervisor.get_state().link
         assert link.last_heartbeat_age_s == 7.0
         assert link.last_line_age_s == 0.0
@@ -97,7 +99,7 @@ class TestIngest:
     def test_the_first_hello_is_not_a_reset_a_later_one_is(self, supervisor: Supervisor) -> None:
         supervisor.ingest_bytes(b"HELLO,1.0\n")
         assert supervisor.get_state().link.nano_resets_seen == 0
-        supervisor.ingest_bytes(b"HB,5000\n" + evt("can", "RECYCLABLE") + b"HELLO,1.0\n")
+        supervisor.ingest_bytes(b"HB,5000\n" + evt("recyclable", "RECYCLABLE") + b"HELLO,1.0\n")
         assert supervisor.get_state().link.nano_resets_seen == 1
 
     def test_a_hello_after_heartbeats_alone_is_a_reset(self, supervisor: Supervisor) -> None:
@@ -122,13 +124,13 @@ class TestIngest:
             return real_add(*args, **kwargs)  # type: ignore[arg-type]
 
         monkeypatch.setattr(store, "add_event", flaky)
-        supervisor.ingest_bytes(evt("can", "RECYCLABLE") + evt("pen", "TRASH"))
+        supervisor.ingest_bytes(evt("recyclable", "RECYCLABLE") + evt("trash", "TRASH"))
         assert supervisor.get_state().counts.trash == 1
 
 
 class TestFrames:
     def test_the_verdict_frame_attaches_to_the_next_event(self, supervisor: Supervisor) -> None:
-        supervisor.ingest_bytes(tiny_frame(fill=42) + evt("can", "RECYCLABLE"))
+        supervisor.ingest_bytes(tiny_frame(fill=42) + evt("recyclable", "RECYCLABLE"))
         event = supervisor.get_state().last_event
         assert event is not None
         assert event.has_frame is True
@@ -138,7 +140,7 @@ class TestFrames:
 
     def test_a_frame_is_attached_across_separate_reads(self, supervisor: Supervisor) -> None:
         supervisor.ingest_bytes(tiny_frame())
-        supervisor.ingest_bytes(evt("pen", "TRASH"))
+        supervisor.ingest_bytes(evt("trash", "TRASH"))
         assert supervisor.get_state().last_event.has_frame is True  # type: ignore[union-attr]
 
     def test_a_frame_older_than_three_seconds_is_discarded(
@@ -146,7 +148,7 @@ class TestFrames:
     ) -> None:
         supervisor.ingest_bytes(tiny_frame())
         clock.advance(3.5)
-        supervisor.ingest_bytes(evt("can", "RECYCLABLE"))
+        supervisor.ingest_bytes(evt("recyclable", "RECYCLABLE"))
         assert supervisor.get_state().last_event.has_frame is False  # type: ignore[union-attr]
 
     def test_a_frame_just_inside_three_seconds_is_kept(
@@ -154,11 +156,13 @@ class TestFrames:
     ) -> None:
         supervisor.ingest_bytes(tiny_frame())
         clock.advance(2.9)
-        supervisor.ingest_bytes(evt("can", "RECYCLABLE"))
+        supervisor.ingest_bytes(evt("recyclable", "RECYCLABLE"))
         assert supervisor.get_state().last_event.has_frame is True  # type: ignore[union-attr]
 
     def test_a_frame_attaches_to_one_event_only(self, supervisor: Supervisor) -> None:
-        supervisor.ingest_bytes(tiny_frame() + evt("can", "RECYCLABLE") + evt("pen", "TRASH"))
+        supervisor.ingest_bytes(
+            tiny_frame() + evt("recyclable", "RECYCLABLE") + evt("trash", "TRASH")
+        )
         events = supervisor.store.recent_events(supervisor.store.current_run().id)
         assert [e.has_frame for e in events] == [False, True]  # newest first
 
@@ -166,7 +170,7 @@ class TestFrames:
         self, supervisor: Supervisor
     ) -> None:
         supervisor.ingest_bytes(tiny_frame(fill=1) + evt("background", "NONE"))
-        supervisor.ingest_bytes(evt("can", "RECYCLABLE"))
+        supervisor.ingest_bytes(evt("recyclable", "RECYCLABLE"))
         assert supervisor.get_state().last_event.has_frame is False  # type: ignore[union-attr]
 
     def test_an_uncertain_event_keeps_its_frame_for_inspection(
@@ -176,7 +180,9 @@ class TestFrames:
         assert supervisor.get_state().last_event.has_frame is True  # type: ignore[union-attr]
 
     def test_the_newest_unclaimed_frame_wins(self, supervisor: Supervisor) -> None:
-        supervisor.ingest_bytes(tiny_frame(fill=1) + tiny_frame(fill=2) + evt("can", "RECYCLABLE"))
+        supervisor.ingest_bytes(
+            tiny_frame(fill=1) + tiny_frame(fill=2) + evt("recyclable", "RECYCLABLE")
+        )
         event = supervisor.get_state().last_event
         assert event is not None
         assert supervisor.store.get_frame(event.id).pixels == bytes([2]) * 64  # type: ignore[union-attr]
@@ -184,14 +190,16 @@ class TestFrames:
     def test_frames_are_counted_and_crc_errors_reported(self, supervisor: Supervisor) -> None:
         bad = bytearray(tiny_frame())
         bad[20] ^= 0xFF
-        supervisor.ingest_bytes(tiny_frame() + preview_packet() + bytes(bad) + evt("can", "TRASH"))
+        supervisor.ingest_bytes(
+            tiny_frame() + preview_packet() + bytes(bad) + evt("recyclable", "TRASH")
+        )
         link = supervisor.get_state().link
         assert (link.frames_received, link.frame_crc_errors) == (2, 1)
 
     def test_a_corrupt_frame_never_costs_the_event_behind_it(self, supervisor: Supervisor) -> None:
         bad = bytearray(tiny_frame())
         bad[30] ^= 0x55
-        supervisor.ingest_bytes(bytes(bad) + evt("pen", "TRASH"))
+        supervisor.ingest_bytes(bytes(bad) + evt("trash", "TRASH"))
         state = supervisor.get_state()
         assert state.counts.trash == 1
         assert state.last_event.has_frame is False  # type: ignore[union-attr]
@@ -212,7 +220,7 @@ class TestFrames:
         assert supervisor.hub.frames.jpeg == to_jpeg(bytes([9]) * 64, 8, 8)
 
     def test_a_preview_frame_never_attaches_to_an_event(self, supervisor: Supervisor) -> None:
-        supervisor.ingest_bytes(preview_packet() + evt("can", "RECYCLABLE"))
+        supervisor.ingest_bytes(preview_packet() + evt("recyclable", "RECYCLABLE"))
         assert supervisor.get_state().last_event.has_frame is False  # type: ignore[union-attr]
 
     def test_preview_fps_is_reported_while_frames_flow(
@@ -230,7 +238,7 @@ class TestRuns:
     def test_a_new_run_zeroes_counts_and_resets_per_run_link_counters(
         self, supervisor: Supervisor
     ) -> None:
-        supervisor.ingest_bytes(b"HB,1\nHELLO,1\n" + evt("can", "RECYCLABLE") + b"junk\n")
+        supervisor.ingest_bytes(b"HB,1\nHELLO,1\n" + evt("recyclable", "RECYCLABLE") + b"junk\n")
         before = supervisor.get_state()
         assert before.counts.total_sorted == 1
         assert before.link.nano_resets_seen == 1
@@ -249,13 +257,13 @@ class TestRuns:
     def test_a_pending_frame_does_not_leak_into_the_next_run(self, supervisor: Supervisor) -> None:
         supervisor.ingest_bytes(tiny_frame())
         supervisor.start_new_run()
-        supervisor.ingest_bytes(evt("can", "RECYCLABLE"))
+        supervisor.ingest_bytes(evt("recyclable", "RECYCLABLE"))
         assert supervisor.get_state().last_event.has_frame is False  # type: ignore[union-attr]
 
     def test_events_after_a_new_run_belong_to_it(self, supervisor: Supervisor) -> None:
-        supervisor.ingest_bytes(evt("can", "RECYCLABLE"))
+        supervisor.ingest_bytes(evt("recyclable", "RECYCLABLE"))
         new = supervisor.start_new_run()
-        supervisor.ingest_bytes(evt("pen", "TRASH"))
+        supervisor.ingest_bytes(evt("trash", "TRASH"))
         state = supervisor.get_state()
         assert state.run.id == new.run.id
         assert (state.counts.recyclable, state.counts.trash) == (0, 1)

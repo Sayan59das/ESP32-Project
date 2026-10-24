@@ -1,14 +1,10 @@
-// Four item pictograms on a 24px grid: 2px stroke, square caps, miter joins, currentColor.
+// Two item pictograms on a 24px grid: 2px stroke, square caps, miter joins, currentColor.
 
 const paths: Record<string, string> = {
-  // A drinks can: body, the two rims, and the ring pull.
-  can: 'M7 4h10v16H7z M7 7h10 M7 17h10 M10 2h4',
-  // A bottle: neck, shoulders, body and label band.
-  glass_bottle: 'M10 2h4v5l3 3v12H7V10l3-3z M7 14h10',
-  // A pen at 45 degrees: barrel, the cap's edge and the nib.
-  pen: 'M16 3l5 5L9 20l-6 1 1-6z M13 6l5 5 M4 15l5 5',
-  // A phone case: the shell and its camera cut-out.
-  phone_case: 'M6 2h12v20H6z M9 5h4v4H9z',
+  // Recyclable: an arrow chasing its own tail.
+  recyclable: 'M20 12a8 8 0 1 1-2.5-5.8 M20 3v6h-6',
+  // Non-recyclable: a bin with its lid, handle and two slats.
+  trash: 'M4 6h16 M9 6V3h6v3 M6 6l1 15h10l1-15 M10 10v7 M14 10v7',
 };
 
 export function hasPictogram(label: string): boolean {

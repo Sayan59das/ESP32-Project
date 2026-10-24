@@ -72,10 +72,10 @@ def test_the_stream_decodes_into_exactly_the_expected_items(nano_bytes: bytes) -
     assert (verdict.kind, verdict.width, verdict.height) == (KIND_VERDICT, 96, 96)
     assert verdict.pixels == GRADIENT
     assert events == [
-        EventLine("glass_bottle", 0.94, "RECYCLABLE", 412),
+        EventLine("recyclable", 0.94, "RECYCLABLE", 412),
         EventLine("uncertain", 0.41, "NONE", 408),
-        EventLine("pen", 1.0, "TRASH", 999999),
-        EventLine("phone_case", 0.0, "TRASH", 0),
+        EventLine("trash", 1.0, "TRASH", 999999),
+        EventLine("trash", 0.0, "TRASH", 0),
     ]
     assert heartbeat == HeartbeatLine(5010)
     assert isinstance(preview, FramePacket)

@@ -55,27 +55,27 @@ def count(items: list[StreamItem], kind: type) -> int:
 
 class TestSynthetic:
     def test_frames_are_96x96_and_deterministic_per_seed(self) -> None:
-        a = synthetic_frame("can", random.Random(1))
-        b = synthetic_frame("can", random.Random(1))
+        a = synthetic_frame("recyclable", random.Random(1))
+        b = synthetic_frame("recyclable", random.Random(1))
         assert len(a) == 96 * 96
         assert a == b
 
     def test_each_class_has_its_own_shape(self) -> None:
         frames = {
             label: synthetic_frame(label, random.Random(1))
-            for label in ("can", "glass_bottle", "pen", "phone_case", None)
+            for label in ("recyclable", "trash", None)
         }
-        assert len(set(frames.values())) == 5
+        assert len(set(frames.values())) == 3
 
     def test_the_shape_is_dark_and_the_background_is_not(self) -> None:
-        frame = synthetic_frame("can", random.Random(1))
+        frame = synthetic_frame("recyclable", random.Random(1))
         inside = frame[50 * 96 + 48]  # middle of the can
         outside = frame[5 * 96 + 5]
         assert inside < 100 < outside
 
     def test_shift_moves_the_shape(self) -> None:
-        still = synthetic_frame("can", random.Random(1), shift=0)
-        moved = synthetic_frame("can", random.Random(1), shift=12)
+        still = synthetic_frame("recyclable", random.Random(1), shift=0)
+        moved = synthetic_frame("recyclable", random.Random(1), shift=12)
         assert still != moved
 
 
@@ -105,7 +105,7 @@ class TestSim:
         source = SimSource(seed=7, time_scale=FAST)
         items = await collect(source, Observer(), lambda i: count(i, EventLine) >= 400)
         events = [i for i in items if isinstance(i, EventLine)]
-        known = {"can", "glass_bottle", "pen", "phone_case"}
+        known = {"recyclable", "trash"}
         sure = [e for e in events if e.label in known]
         unsure = [e for e in events if e.label == "uncertain"]
         assert {e.label for e in sure} == known
@@ -116,12 +116,7 @@ class TestSim:
         assert 395 <= mean_latency <= 425
         for e in events:
             expected = {"recyclable": "RECYCLABLE", "trash": "TRASH"}
-            if e.label in ("can", "glass_bottle"):
-                assert e.firmware_bin == expected["recyclable"]
-            elif e.label in ("pen", "phone_case"):
-                assert e.firmware_bin == expected["trash"]
-            else:
-                assert e.firmware_bin == "NONE"
+            assert e.firmware_bin == expected.get(e.label, "NONE")
 
     async def test_no_preview_frames_until_p1_and_none_after_p0(self) -> None:
         source = SimSource(seed=3, time_scale=50)
@@ -175,7 +170,7 @@ def write_rec(path: Path, records: list[tuple[int, bytes]]) -> None:
 class TestReplay:
     RECORDS = (
         (0, b"HELLO,1.0\n"),
-        (150, b"HB,5000\nEVT,can,0.9"),
+        (150, b"HB,5000\nEVT,recyclable,0.9"),
         (400, b"4,RECYCLABLE,412\n"),
     )
 
@@ -207,7 +202,7 @@ class TestReplay:
         assert items == [
             HelloLine("1.0"),
             HeartbeatLine(5000),
-            EventLine("can", 0.94, "RECYCLABLE", 412),
+            EventLine("recyclable", 0.94, "RECYCLABLE", 412),
         ]
 
     async def test_it_loops_and_the_looped_hello_is_not_a_nano_reset(self, tmp_path: Path) -> None:

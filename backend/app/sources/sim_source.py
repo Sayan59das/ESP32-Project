@@ -19,28 +19,18 @@ from .base import SourceObserver
 logger = logging.getLogger(__name__)
 
 FRAME_SIZE = 96
-_WEIGHTS = {"can": 0.30, "glass_bottle": 0.25, "pen": 0.20, "phone_case": 0.25}
+_WEIGHTS = {"recyclable": 0.55, "trash": 0.45}
 _UNCERTAIN_CHANCE = 1 / 15
 _PREVIEW_INTERVAL_S = 0.2  # 5 frames per second
 _HEARTBEAT_INTERVAL_S = 5.0
 _PREVIEW_BACKLOG_LIMIT = 8
 
 
-def _distance_to_segment(px: float, py: float, ax: float, ay: float, bx: float, by: float) -> float:
-    dx, dy = bx - ax, by - ay
-    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
-    return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
-
-
 def _is_dark(label: str | None, x: float, y: float) -> bool:
     """Whether pixel (x, y) falls inside the dark silhouette for `label`."""
-    if label == "can":
-        return 34 <= x <= 62 and 22 <= y <= 76
-    if label == "glass_bottle":
-        return (36 <= x <= 60 and 46 <= y <= 80) or (44 <= x <= 52 and 16 <= y <= 46)
-    if label == "pen":
-        return _distance_to_segment(x, y, 22, 76, 74, 20) <= 2.5
-    if label == "phone_case":
+    if label == "recyclable":  # a can: a tall rounded body with a neck
+        return (34 <= x <= 62 and 30 <= y <= 76) or (42 <= x <= 54 and 18 <= y <= 30)
+    if label == "trash":  # a phone case: a slab with a camera cut-out
         in_body = 28 <= x <= 68 and 16 <= y <= 80
         in_camera_cutout = 34 <= x <= 46 and 22 <= y <= 32
         return in_body and not in_camera_cutout

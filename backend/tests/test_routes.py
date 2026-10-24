@@ -46,10 +46,8 @@ class TestPlainEndpoints:
             "recycle_rate": None,
         }
         assert [(i["label"], i["count"]) for i in body["by_item"]] == [
-            ("can", 0),
-            ("glass_bottle", 0),
-            ("pen", 0),
-            ("phone_case", 0),
+            ("recyclable", 0),
+            ("trash", 0),
         ]
         assert body["last_event"] is None
         assert body["run"]["source"] == "sim"
@@ -70,19 +68,19 @@ class TestPlainEndpoints:
 
     def test_state_reflects_ingested_events(self, client: TestClient) -> None:
         bridge(client).ingest_bytes(
-            evt("can", "RECYCLABLE") + evt("pen", "TRASH") + evt("pen", "TRASH")
+            evt("recyclable", "RECYCLABLE") + evt("trash", "TRASH") + evt("trash", "TRASH")
         )
         body = client.get("/api/state").json()
         assert body["counts"]["recyclable"] == 1
         assert body["counts"]["trash"] == 2
         assert body["counts"]["recycle_rate"] == pytest.approx(1 / 3)
-        assert body["last_event"]["label"] == "pen"
-        assert {i["label"]: i["count"] for i in body["by_item"]}["pen"] == 2
+        assert body["last_event"]["label"] == "trash"
+        assert {i["label"]: i["count"] for i in body["by_item"]}["trash"] == 2
 
 
 class TestEvents:
     def test_newest_first_with_paging(self, client: TestClient) -> None:
-        bridge(client).ingest_bytes(b"".join(evt("can", "RECYCLABLE") for _ in range(5)))
+        bridge(client).ingest_bytes(b"".join(evt("recyclable", "RECYCLABLE") for _ in range(5)))
         everything = client.get("/api/events").json()
         ids = [e["id"] for e in everything]
         assert ids == sorted(ids, reverse=True)
@@ -91,7 +89,7 @@ class TestEvents:
         assert [e["id"] for e in older] == ids[3:]
 
     def test_event_shape(self, client: TestClient) -> None:
-        bridge(client).ingest_bytes(tiny_frame() + evt("glass_bottle", "RECYCLABLE", "0.94", 412))
+        bridge(client).ingest_bytes(tiny_frame() + evt("recyclable", "RECYCLABLE", "0.94", 412))
         event = client.get("/api/events").json()[0]
         assert set(event) == {
             "id",
@@ -105,7 +103,7 @@ class TestEvents:
             "source",
         }
         assert (event["label"], event["bin"], event["confidence"], event["latency_ms"]) == (
-            "glass_bottle",
+            "recyclable",
             "recyclable",
             0.94,
             412,
@@ -118,7 +116,7 @@ class TestEvents:
         assert client.get(f"/api/events?{query}").status_code == 422
 
     def test_only_the_current_run_is_listed(self, client: TestClient) -> None:
-        bridge(client).ingest_bytes(evt("can", "RECYCLABLE"))
+        bridge(client).ingest_bytes(evt("recyclable", "RECYCLABLE"))
         client.post("/api/runs")
         assert client.get("/api/events").json() == []
 
@@ -127,7 +125,7 @@ class TestFramePng:
     def test_it_returns_the_stored_frame_as_a_lossless_grayscale_png(
         self, client: TestClient
     ) -> None:
-        bridge(client).ingest_bytes(tiny_frame(fill=77) + evt("can", "RECYCLABLE"))
+        bridge(client).ingest_bytes(tiny_frame(fill=77) + evt("recyclable", "RECYCLABLE"))
         event_id = client.get("/api/events").json()[0]["id"]
         response = client.get(f"/api/events/{event_id}/frame.png")
         assert response.status_code == 200
@@ -138,7 +136,7 @@ class TestFramePng:
         assert image.tobytes() == bytes([77]) * 64
 
     def test_an_event_without_a_frame_is_a_404(self, client: TestClient) -> None:
-        bridge(client).ingest_bytes(evt("can", "RECYCLABLE"))
+        bridge(client).ingest_bytes(evt("recyclable", "RECYCLABLE"))
         event_id = client.get("/api/events").json()[0]["id"]
         assert client.get(f"/api/events/{event_id}/frame.png").status_code == 404
 
@@ -150,7 +148,9 @@ class TestRunsAndExport:
     def test_a_new_run_zeroes_the_counts_and_the_export_keeps_the_old_one(
         self, client: TestClient
     ) -> None:
-        bridge(client).ingest_bytes(tiny_frame() + evt("can", "RECYCLABLE") + evt("pen", "TRASH"))
+        bridge(client).ingest_bytes(
+            tiny_frame() + evt("recyclable", "RECYCLABLE") + evt("trash", "TRASH")
+        )
         old_run = client.get("/api/state").json()["run"]["id"]
         response = client.post("/api/runs")
         assert response.status_code == 200
@@ -159,7 +159,7 @@ class TestRunsAndExport:
         assert fresh["counts"]["total_sorted"] == 0
         assert client.get("/api/state").json()["counts"]["total_sorted"] == 0
 
-        bridge(client).ingest_bytes(evt("glass_bottle", "RECYCLABLE"))
+        bridge(client).ingest_bytes(evt("recyclable", "RECYCLABLE"))
         rows = list(csv.reader(io.StringIO(client.get("/api/export.csv").text)))
         assert rows[0] == [
             "run_id",
@@ -173,9 +173,9 @@ class TestRunsAndExport:
         ]
         body = rows[1:]
         assert [(r[0], r[2], r[3], r[6], r[7]) for r in body] == [
-            (str(old_run), "can", "recyclable", "sim", "true"),
-            (str(old_run), "pen", "trash", "sim", "false"),
-            (str(fresh["run"]["id"]), "glass_bottle", "recyclable", "sim", "false"),
+            (str(old_run), "recyclable", "recyclable", "sim", "true"),
+            (str(old_run), "trash", "trash", "sim", "false"),
+            (str(fresh["run"]["id"]), "recyclable", "recyclable", "sim", "false"),
         ]
 
     def test_export_is_a_csv_download(self, client: TestClient) -> None:
@@ -288,7 +288,11 @@ class TestSse:
         assert state["counts"]["total_sorted"] == 0
 
         seen_ids = []
-        for label, bin_name in [("can", "RECYCLABLE"), ("pen", "TRASH"), ("can", "RECYCLABLE")]:
+        for label, bin_name in [
+            ("recyclable", "RECYCLABLE"),
+            ("trash", "TRASH"),
+            ("recyclable", "RECYCLABLE"),
+        ]:
             supervisor.ingest_bytes(evt(label, bin_name))
             kind, event, event_id = parse_sse(await anext(stream))
             assert (kind, event_id) == ("event", str(event["id"]))
@@ -304,7 +308,7 @@ class TestSse:
         self, supervisor: Supervisor
     ) -> None:
         for _ in range(4):
-            supervisor.ingest_bytes(evt("can", "RECYCLABLE"))
+            supervisor.ingest_bytes(evt("recyclable", "RECYCLABLE"))
         recent = supervisor.store.recent_events(supervisor.store.current_run().id)
         first, second, third, fourth = (e.id for e in reversed(recent))
 
@@ -315,15 +319,15 @@ class TestSse:
         assert [(k, i) for k, _, i in replayed] == [("event", str(third)), ("event", str(fourth))]
         assert first < second
 
-        supervisor.ingest_bytes(evt("pen", "TRASH"))  # a live event after the replay
+        supervisor.ingest_bytes(evt("trash", "TRASH"))  # a live event after the replay
         kind, event, _ = parse_sse(await anext(stream))
-        assert (kind, event["label"]) == ("event", "pen")
+        assert (kind, event["label"]) == ("event", "trash")
         await stream.aclose()
 
     async def test_the_state_sent_on_connect_already_includes_replayed_events(
         self, supervisor: Supervisor
     ) -> None:
-        supervisor.ingest_bytes(evt("can", "RECYCLABLE") + evt("pen", "TRASH"))
+        supervisor.ingest_bytes(evt("recyclable", "RECYCLABLE") + evt("trash", "TRASH"))
         stream = sse_messages(supervisor, 0)
         await anext(stream)
         _, state, _ = parse_sse(await anext(stream))
@@ -331,7 +335,7 @@ class TestSse:
         await stream.aclose()
 
     async def test_a_new_run_resends_the_state_zeroed(self, supervisor: Supervisor) -> None:
-        supervisor.ingest_bytes(evt("can", "RECYCLABLE"))
+        supervisor.ingest_bytes(evt("recyclable", "RECYCLABLE"))
         stream = sse_messages(supervisor, None)
         await anext(stream)
         await anext(stream)

@@ -17,11 +17,11 @@ class Item:
     bin: BinName
 
 
+# The trained model answers recyclable or non-recyclable, so the table has one entry per
+# bin. The label `trash` is the model's `non_recyclable` class (see Model/camera_bridge.py).
 ITEMS: tuple[Item, ...] = (
-    Item("can", "Can", "recyclable"),
-    Item("glass_bottle", "Glass bottle", "recyclable"),
-    Item("pen", "Pen", "trash"),
-    Item("phone_case", "Phone case", "trash"),
+    Item("recyclable", "Recyclable", "recyclable"),
+    Item("trash", "Non-recyclable", "trash"),
 )
 
 # Every label the firmware may legitimately send. "background" is accepted by the
