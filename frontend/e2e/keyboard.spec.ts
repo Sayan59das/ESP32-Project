@@ -6,7 +6,7 @@ async function firstThumbnail(page: Page) {
   return thumb;
 }
 
-for (const path of ['/', '/project']) {
+for (const path of ['/console', '/project', '/']) {
   test(`on ${path} the first Tab reaches a visible skip link into the main content`, async ({
     page,
   }) => {
@@ -24,7 +24,7 @@ for (const path of ['/', '/project']) {
 }
 
 test('the new-run dialog keeps Tab inside and gives focus back on Escape', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/console');
   const start = page.getByRole('button', { name: 'Start new run' });
   await start.focus();
   await page.keyboard.press('Enter');
@@ -40,7 +40,7 @@ test('the new-run dialog keeps Tab inside and gives focus back on Escape', async
 });
 
 test('the frame dialog gives focus back to its thumbnail', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/console');
   const thumb = await firstThumbnail(page);
   const name = (await thumb.getAttribute('aria-label')) ?? '';
   const same = page.getByRole('button', { name, exact: true });
@@ -55,7 +55,7 @@ test('the frame dialog gives focus back to its thumbnail', async ({ page }) => {
 test('pausing the preview stops the picture on this screen but not the counting', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/console');
   await firstThumbnail(page);
   const viewport = page.getByTestId('camera-viewport');
   const live = viewport.getByRole('img', { name: /^Live classifier view/ });
@@ -85,6 +85,8 @@ test('pausing the preview stops the picture on this screen but not the counting'
 
 test('every page has its own title', async ({ page }) => {
   await page.goto('/');
+  await expect(page).toHaveTitle('EcoSort Edge');
+  await page.goto('/console');
   await expect(page).toHaveTitle('Console, EcoSort Edge');
   await page.goto('/project');
   await expect(page).toHaveTitle('Project, EcoSort Edge');

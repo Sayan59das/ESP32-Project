@@ -10,7 +10,7 @@ async function violations(page: Page): Promise<string[]> {
 
 async function open(page: Page, path: string) {
   await page.goto(path);
-  if (path === '/') {
+  if (path === '/console') {
     // Wait for live data so the scan covers the log, its thumbnails and the readout.
     await expect(page.getByRole('button', { name: /^Show the frame for/ }).first()).toBeVisible({
       timeout: 45_000,
@@ -20,7 +20,7 @@ async function open(page: Page, path: string) {
 
 // Both themes, at the desktop and the phone layout: contrast differs by theme, and the
 // phone layout folds columns away.
-for (const path of ['/', '/project']) {
+for (const path of ['/console', '/project', '/']) {
   for (const scheme of ['light', 'dark'] as const) {
     for (const [width, height] of [
       [1920, 1080],
@@ -49,7 +49,7 @@ async function settled(page: Page) {
 }
 
 test('both dialogs have no accessibility violations while open', async ({ page }) => {
-  await open(page, '/');
+  await open(page, '/console');
   await page.getByRole('button', { name: 'Start new run' }).click();
   await settled(page);
   expect(await violations(page)).toEqual([]);
@@ -64,7 +64,7 @@ test('both dialogs have no accessibility violations while open', async ({ page }
 });
 
 test('a paused preview has no accessibility violations', async ({ page }) => {
-  await open(page, '/');
+  await open(page, '/console');
   await page.getByRole('button', { name: 'Pause preview' }).click();
   await expect(
     page.getByTestId('camera-viewport').getByText(/^Counting continues and verdicts still show/),

@@ -10,7 +10,7 @@ async function axeViolations(page: Page): Promise<string[]> {
 
 test('an unreachable service is named, with no counts and no endless loading', async ({ page }) => {
   await page.route('**/api/**', (route) => route.abort());
-  await page.goto('/');
+  await page.goto('/console');
   const banner = page.getByRole('banner');
   await expect(banner.getByText('Classifier service unreachable.')).toBeVisible();
   await expect(banner.getByText(/Start it with run_all\.bat\./)).toBeVisible();
@@ -25,7 +25,7 @@ test('a stream that will not connect is called paused while the service answers'
   page,
 }) => {
   await page.route('**/api/stream', (route) => route.fulfill({ status: 503, body: '' }));
-  await page.goto('/');
+  await page.goto('/console');
   await expect(page.getByRole('banner').getByText('Live updates paused.')).toBeVisible({
     timeout: 10_000,
   });
@@ -37,6 +37,9 @@ test('a stream that will not connect is called paused while the service answers'
 test('an unknown address gets a page that leads back', async ({ page }) => {
   await page.goto('/no-such-page');
   await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Open the console' })).toHaveAttribute('href', '/');
+  await expect(page.getByRole('link', { name: 'Open the console' })).toHaveAttribute(
+    'href',
+    '/console',
+  );
   expect(await axeViolations(page)).toEqual([]);
 });

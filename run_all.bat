@@ -109,17 +109,17 @@ goto wait_loop
 
 :console_up
 if defined ECOSORT_NO_BROWSER goto running
-start "" http://localhost:3000
+start "" http://localhost:3000/console
 goto running
 
 :console_slow
 echo  The console is taking long. Look at window 3 for errors, then open
-echo  http://localhost:3000 yourself.
+echo  http://localhost:3000/console yourself.
 goto running
 
 :running
 echo.
-echo  Running. Open http://localhost:3000
+echo  Running. Open http://localhost:3000/console
 echo.
 echo    Put an item in front of the camera: the matching count goes up by one.
 echo    Take it away before the next one, so the view is empty in between.

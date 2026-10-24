@@ -13,7 +13,7 @@ export default function NotFound() {
       title={copy.notFoundTitle}
       actions={
         <>
-          <Link href="/" className={buttonClass('primary')}>
+          <Link href="/console" className={buttonClass('primary')}>
             Open the console
           </Link>
           <Link href="/project" className={buttonClass('secondary')}>

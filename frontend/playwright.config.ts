@@ -24,6 +24,15 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'retain-on-failure',
+    // The 3D pages need WebGL. A machine with no graphics card gets it from a software renderer.
+    launchOptions: {
+      args: [
+        '--use-angle=swiftshader',
+        '--enable-unsafe-swiftshader',
+        '--ignore-gpu-blocklist',
+        '--enable-webgl',
+      ],
+    },
   },
   projects: [
     {

@@ -1,0 +1,131 @@
+{
+  "recorded_at": "2026-10-24T20:38:44Z",
+  "commit": "8b440d9 + uncommitted changes",
+  "suites": [
+    {
+      "id": "backend",
+      "label": "Backend",
+      "what": "pytest: parsing, framing, storage, the camera bridge and counter, serial scanning",
+      "passed": 331,
+      "failed": 0,
+      "skipped": 3,
+      "seconds": null
+    },
+    {
+      "id": "frontend",
+      "label": "Console logic",
+      "what": "Vitest: state, formatting, link and camera states, scene maths",
+      "passed": 68,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": null
+    },
+    {
+      "id": "browser",
+      "label": "Browser",
+      "what": "Playwright: layout, states, keyboard, accessibility and offline checks",
+      "passed": 47,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": null
+    },
+    {
+      "id": "contrast",
+      "label": "Colour contrast",
+      "what": "Every text and control colour pair in both themes, against WCAG 2.2 AA",
+      "passed": 78,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 0.1
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "off",
+      "title": "Camera switched off",
+      "what": "The board keeps sending, but every pixel is black.",
+      "expectation": "Counts nothing, and the console says the camera is not responding.",
+      "counted": 0,
+      "alive": false,
+      "reported": "dark or flat",
+      "passed": true
+    },
+    {
+      "id": "covered",
+      "title": "Lens covered",
+      "what": "A hand over the lens: almost black, with sensor noise.",
+      "expectation": "Counts nothing, and the console says the camera is not responding.",
+      "counted": 0,
+      "alive": false,
+      "reported": "dark or flat",
+      "passed": true
+    },
+    {
+      "id": "lights",
+      "title": "Room lights off",
+      "what": "The scene is still there, at a seventh of its brightness.",
+      "expectation": "Counts nothing, and the console says the camera is not responding.",
+      "counted": 0,
+      "alive": false,
+      "reported": "dark or flat",
+      "passed": true
+    },
+    {
+      "id": "flat",
+      "title": "Flat grey picture",
+      "what": "A uniform grey, with a little noise: no scene at all.",
+      "expectation": "Counts nothing, and the console says the camera is not responding.",
+      "counted": 0,
+      "alive": false,
+      "reported": "dark or flat",
+      "passed": true
+    },
+    {
+      "id": "frozen",
+      "title": "Frozen picture",
+      "what": "The same frame, over and over: the board is alive but the sensor is stuck.",
+      "expectation": "Counts nothing, and the console says the camera is not responding.",
+      "counted": 0,
+      "alive": false,
+      "reported": "frozen",
+      "passed": true
+    },
+    {
+      "id": "unplugged",
+      "title": "Board unplugged, then a different view",
+      "what": "Twenty seconds with no frames, then a scene that is not the one it learned.",
+      "expectation": "Counts nothing while it learns the new view.",
+      "counted": 0,
+      "alive": true,
+      "reported": null,
+      "passed": true
+    },
+    {
+      "id": "comeback",
+      "title": "Switched off, then on again",
+      "what": "Off for four seconds, back with an empty view, then one recyclable item.",
+      "expectation": "Counts that one item, once, with its own label.",
+      "passed": true,
+      "counted": 1,
+      "alive": true,
+      "reported": "recyclable"
+    }
+  ],
+  "scenario_note": "Run with the real model on a scene built from our own training frames, not filmed: it tests the counting, not the lens.",
+  "model": {
+    "parameters": 293970,
+    "training_frames": {
+      "recyclable": 84,
+      "non_recyclable": 132
+    },
+    "validation_frames": {
+      "recyclable": 20,
+      "non_recyclable": 33
+    },
+    "validation_correct": {
+      "recyclable": 20,
+      "non_recyclable": 33
+    }
+  },
+  "media": []
+}

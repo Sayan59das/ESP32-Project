@@ -16,7 +16,7 @@ async function firstThumbnail(page: Page) {
 
 test.describe('console against the simulator', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/console');
   });
 
   test('the camera window is square', async ({ page }) => {
@@ -112,7 +112,7 @@ async function highlightMs(page: Page): Promise<number> {
 }
 
 test('a count change is highlighted for no more than 300 ms', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/console');
   const ms = await highlightMs(page);
   expect(ms).toBeGreaterThan(0);
   expect(ms).toBeLessThanOrEqual(300);
@@ -120,7 +120,7 @@ test('a count change is highlighted for no more than 300 ms', async ({ page }) =
 
 test('reduced motion removes the count-change highlight', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
+  await page.goto('/console');
   expect(await highlightMs(page)).toBe(0);
 });
 
@@ -128,7 +128,7 @@ test('with WCAG 1.4.12 text spacing the counters still fit inside their tiles', 
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await page.goto('/console');
   await firstThumbnail(page);
   await page.addStyleTag({
     content:
@@ -160,7 +160,7 @@ for (const [width, height] of [
 ] as const) {
   test(`no horizontal scroll at ${width} wide`, async ({ page }) => {
     await page.setViewportSize({ width, height });
-    await page.goto('/');
+    await page.goto('/console');
     await firstThumbnail(page);
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(width);

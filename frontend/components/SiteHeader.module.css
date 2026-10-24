@@ -4,6 +4,17 @@
   background: var(--surface);
 }
 
+/* On the 3D pages the header stays put while the world moves behind it. It is almost, not
+   quite, opaque, so its text keeps the contrast of the solid surface. */
+.floating {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
 /* Off screen until focused, then over the top-left of the bar. */
 .skip {
   position: absolute;
@@ -35,12 +46,21 @@
 }
 
 .brand {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--ink);
   font-family: var(--font-display);
   font-size: var(--text-xl);
   font-stretch: var(--display-wdth);
   font-weight: var(--weight-heavy);
   letter-spacing: -0.01em;
   line-height: 1.2;
+  text-decoration: none;
+}
+
+.mark {
+  flex: none;
 }
 
 .nav {

@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 // switches their camera off and still sees detections must be able to see why.
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/console');
   await expect(page.getByRole('banner').getByText('Simulated data', { exact: true })).toBeVisible();
 });
 

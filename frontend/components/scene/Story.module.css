@@ -1,0 +1,366 @@
+/* The story sits on top of the fixed 3D world. Each chapter is a tall section whose content
+   stays on screen (sticky) while the camera moves behind it. Text is always on a solid card or
+   on the plain mist at the left of the hero, never straight over the busy part of the scene. */
+.main {
+  position: relative;
+  z-index: 1;
+}
+
+.chapter {
+  position: relative;
+  min-height: 200vh;
+}
+
+.first {
+  min-height: 150vh;
+}
+
+.last {
+  min-height: 140vh;
+}
+
+.sticky {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  /* Room on the right for the chapter dots, so no card ever sits under them. */
+  padding: 88px 60px var(--space-4) var(--gutter);
+  pointer-events: none;
+}
+
+/* Text and buttons take clicks; the empty part of a chapter leaves the page behind alone. */
+.card,
+.hero,
+.scrollHint {
+  pointer-events: auto;
+}
+
+/* Cards */
+.card {
+  display: grid;
+  gap: var(--space-2);
+  width: min(32rem, 100%);
+  padding: var(--space-4);
+  border: var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 0 24px 80px rgb(8 14 18 / 0.18);
+}
+
+.left {
+  margin-right: auto;
+}
+
+.right {
+  margin-left: auto;
+}
+
+/* A caption along the bottom, for a chapter whose picture needs the whole width. */
+.stickyBottom {
+  align-items: flex-end;
+  padding-bottom: var(--space-4);
+}
+
+.wide {
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: var(--space-1-5) var(--space-5);
+  align-items: start;
+  width: min(68rem, 100%);
+  margin-inline: auto;
+}
+
+.wide > .kicker,
+.wide > .title {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+  .wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.kicker {
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.kicker span {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-stretch: var(--display-wdth);
+}
+
+.title {
+  font-size: clamp(1.9rem, 1.2rem + 2.2vw, 3rem);
+  font-stretch: 70%;
+  font-weight: var(--weight-heavy);
+  line-height: 1;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.card p {
+  max-width: 60ch;
+  text-wrap: pretty;
+}
+
+.card code {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+  font-size: 0.92em;
+}
+
+.note {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.facts {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.facts li {
+  padding-left: var(--space-2);
+  border-left: 3px solid var(--ink);
+}
+
+.outcomes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.outcomes li {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  padding: var(--space-half) var(--space-1-5);
+  border-radius: var(--radius-sm);
+  font-weight: var(--weight-bold);
+}
+
+.outRecyclable {
+  background: var(--recyclable-tint);
+  color: var(--recyclable-ink);
+}
+
+.outTrash {
+  background: var(--trash-tint);
+  color: var(--trash-ink);
+}
+
+.outUnsure {
+  background: var(--unsure-tint);
+  color: var(--unsure-ink);
+}
+
+.rhythm {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.rhythm li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1-5);
+  align-items: center;
+  padding: var(--space-1) var(--space-1-5);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
+
+/* The opening: large type straight on the mist, on the left. The 3D subject is shifted right
+   to leave this space. */
+.hero {
+  display: grid;
+  gap: var(--space-3);
+  width: min(46rem, 100%);
+  margin-right: auto;
+  /* A soft halo of the ground colour keeps the letters clear if a brick drifts behind them. */
+  text-shadow:
+    0 0 36px var(--ground),
+    0 0 14px var(--ground);
+}
+
+.heroKicker {
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.heroTitle {
+  display: grid;
+  font-size: clamp(3.6rem, 2rem + 9vw, 10.5rem);
+  font-stretch: 62%;
+  font-weight: var(--weight-heavy);
+  line-height: 0.86;
+  letter-spacing: -0.02em;
+}
+
+.heroEdge {
+  color: var(--recyclable-ink);
+}
+
+.heroLede {
+  max-width: 34rem;
+  font-size: var(--text-xl);
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-shadow: none;
+}
+
+.pills li {
+  padding: var(--space-half) var(--space-1-5);
+  border: var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.scrollHint {
+  position: absolute;
+  bottom: var(--space-3);
+  left: 50%;
+  display: grid;
+  gap: var(--space-1);
+  justify-items: center;
+  color: var(--ink);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  transform: translateX(-50%);
+}
+
+.scrollHint i {
+  display: block;
+  width: 2px;
+  height: 36px;
+  background: linear-gradient(var(--ink), transparent);
+  transform-origin: top;
+  animation: hint 1.8s var(--ease-standard) 3;
+}
+
+@keyframes hint {
+  0% {
+    transform: scaleY(0);
+  }
+  60% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .sticky {
+    padding-right: 44px;
+    padding-left: var(--space-3);
+  }
+}
+
+/* A phone: the world shows in the top half and the words sit below it. */
+@media (max-width: 640px) {
+  .chapter {
+    min-height: 170vh;
+  }
+
+  .first {
+    min-height: 130vh;
+  }
+
+  /* The header is two lines tall here, and the pause button sits under the words. */
+  .sticky {
+    align-items: flex-end;
+    padding: 144px var(--space-2) 56px;
+  }
+
+  /* The words must fit without scrolling inside the card: a smaller size, and the one detail
+     that can wait (marked .more) is left to the larger screens. */
+  .card {
+    gap: var(--space-1);
+    width: 100%;
+    padding: var(--space-2);
+    margin-inline: 0;
+    font-size: var(--text-sm);
+  }
+
+  .more {
+    display: none;
+  }
+
+  .title {
+    font-size: 1.8rem;
+  }
+
+  .hero {
+    gap: var(--space-2);
+  }
+
+  .heroTitle {
+    font-size: clamp(3.2rem, 18vw, 5.4rem);
+  }
+
+  .heroLede {
+    font-size: var(--text-lg);
+  }
+
+  .pills {
+    display: none;
+  }
+
+  .scrollHint {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chapter,
+  .first,
+  .last {
+    min-height: 110vh;
+  }
+
+  .scrollHint i {
+    animation: none;
+  }
+}

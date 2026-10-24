@@ -1,0 +1,136 @@
+/* The 3D world is a fixed layer behind the page. If it cannot be drawn, the page keeps a plain
+   gradient and all its text, so nothing depends on WebGL. */
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--surface-sunk) 0%, var(--ground) 70%);
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.9s var(--ease-standard);
+}
+
+.stage[data-ready='true'] .canvas {
+  opacity: 1;
+}
+
+.stage[data-state='unavailable'] .canvas {
+  display: none;
+}
+
+.labels {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* A label sits at the screen position of a point in the scene (set from script). Its parts
+   are placed relative to that point. */
+.tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  opacity: 0;
+  will-change: transform, opacity;
+  --lean-x: 1;
+  --lean-y: 1;
+}
+
+/* The engine flips data-side when a label would run off the screen. */
+.tag[data-side='left-up'],
+.tag[data-side='left-down'] {
+  --lean-x: -1;
+}
+
+.tag[data-side='right-down'],
+.tag[data-side='left-down'] {
+  --lean-y: -1;
+}
+
+.dot {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.leader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 58px;
+  height: 0;
+  border-top: 2px solid var(--ink);
+  transform-origin: 0 0;
+  transform: scaleX(var(--lean-x)) rotate(calc(var(--lean-y) * -30deg));
+}
+
+.text {
+  position: absolute;
+  top: calc(var(--lean-y) * -29px);
+  display: grid;
+  gap: 2px;
+  padding: 6px 10px 6px;
+  border-bottom: 2px solid var(--ink);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.tag[data-side^='right'] .text {
+  left: 50px;
+}
+
+.tag[data-side^='left'] .text {
+  right: 50px;
+}
+
+.tag[data-side$='-up'] .text {
+  transform: translateY(-100%);
+}
+
+.text strong {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-stretch: var(--display-wdth);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.text small {
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+}
+
+.control {
+  position: fixed;
+  bottom: var(--space-2);
+  left: var(--space-2);
+  z-index: 40;
+}
+
+@media (max-width: 640px) {
+  .tag {
+    display: none;
+  }
+
+  /* Under the words, which stop 56px above the bottom edge. */
+  .control {
+    bottom: var(--space-1);
+  }
+}

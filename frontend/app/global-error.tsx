@@ -36,7 +36,7 @@ export default function GlobalError({
               <Button variant="primary" icon="replay" onClick={reset}>
                 {copy.errorRetry}
               </Button>
-              <Button onClick={() => window.location.assign('/')}>{copy.errorReload}</Button>
+              <Button onClick={() => window.location.assign('/console')}>{copy.errorReload}</Button>
             </>
           }
         >
