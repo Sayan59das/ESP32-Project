@@ -328,6 +328,7 @@ export function CameraWindow({
 
         {verdict !== null && outcome !== null ? (
           <p
+            key={verdict.id}
             className={`${styles.strip} ${styles[`strip-${verdict.bin}`] ?? ''}`}
             aria-hidden="true"
           >

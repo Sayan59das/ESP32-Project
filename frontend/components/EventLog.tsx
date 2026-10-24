@@ -14,6 +14,7 @@ import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Dialog } from './ui/Dialog';
+import { EmptyState } from './ui/EmptyState';
 import { Skeleton } from './ui/Skeleton';
 
 /** The lossless frame the model classified, enlarged, with the verdict's facts. */
@@ -83,12 +84,15 @@ export function EventLog({
   items,
   latestId,
   loading,
+  unavailable,
   className,
 }: {
   events: Event[];
   items: ItemCount[];
+  /** The newest event that arrived live; its row is highlighted once. */
   latestId: number | null;
   loading: boolean;
+  unavailable: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState<Event | null>(null);
@@ -111,7 +115,13 @@ export function EventLog({
           ))}
         </div>
       ) : events.length === 0 ? (
-        <p className={styles.empty}>{copy.emptyRecent}</p>
+        unavailable ? (
+          <p className={styles.unavailable}>{copy.unavailable}</p>
+        ) : (
+          <EmptyState icon="waiting" title={copy.emptyRecentTitle}>
+            <p>{copy.emptyRecent}</p>
+          </EmptyState>
+        )
       ) : (
         <div className={styles.scroller} role="region" aria-labelledby="recent-title" tabIndex={0}>
           <table className={styles.table}>

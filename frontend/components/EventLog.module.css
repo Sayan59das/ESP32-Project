@@ -43,9 +43,16 @@
   border-bottom: var(--border);
 }
 
-/* The newest row: a calm tint, set in phase 3 with the count-change highlight. */
+/* A row that arrived live starts tinted and clears in 250ms, with the count-change
+   highlight. Rows loaded with the page do not move. */
 .rowNew td {
-  background: var(--surface);
+  animation: row-in var(--motion-highlight) var(--ease-standard) both;
+}
+
+@keyframes row-in {
+  from {
+    background-color: var(--signal-tint);
+  }
 }
 
 .cell {
@@ -98,7 +105,7 @@
   background: var(--surface-sunk);
 }
 
-.empty {
+.unavailable {
   max-width: var(--measure);
   color: var(--ink-muted);
 }

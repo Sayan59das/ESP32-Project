@@ -96,7 +96,8 @@ svg {
 
   *,
   *::before,
-  *::after {
+  *::after,
+  ::backdrop {
     animation-duration: 0s !important;
     animation-delay: 0s !important;
     animation-iteration-count: 1 !important;

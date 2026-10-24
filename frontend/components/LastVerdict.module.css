@@ -125,9 +125,66 @@
   color: var(--ink);
 }
 
-.empty {
+/* A verdict that arrived live settles in once; one loaded with the page does not move. */
+.fresh .details {
+  animation: verdict-in var(--motion-base) var(--ease-standard) both;
+}
+
+@keyframes verdict-in {
+  from {
+    transform: translateY(4px);
+    opacity: 0.4;
+  }
+}
+
+.unavailable {
   max-width: var(--measure);
   color: var(--ink-muted);
+}
+
+/* The counting rhythm on an empty run: four numbered steps, two by two where they fit,
+   otherwise one column; never three and one. */
+.rhythmBox {
+  container-type: inline-size;
+}
+
+.rhythm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  padding: 0;
+  color: var(--ink);
+  list-style: none;
+  counter-reset: step;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: var(--space-1);
+  align-items: start;
+  counter-increment: step;
+}
+
+.step::before {
+  content: counter(step);
+  min-width: 1.5em;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+  font-weight: var(--weight-bold);
+  text-align: center;
+}
+
+.step svg {
+  margin-top: 2px;
+  color: var(--ink-muted);
+}
+
+@container (min-width: 30rem) {
+  .rhythm {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {

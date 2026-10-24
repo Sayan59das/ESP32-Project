@@ -17,9 +17,28 @@
   font-size: var(--text-sm);
 }
 
-.notice {
+.status > p {
+  margin-top: var(--space-1-5);
+}
+
+.notice,
+.failed {
   padding: var(--space-1) var(--space-1-5);
   border-left: 3px solid var(--signal);
   background: var(--signal-tint);
   color: var(--signal-ink);
+}
+
+.failed {
+  display: flex;
+  gap: var(--space-1);
+  align-items: flex-start;
+  border-left-color: var(--alert);
+  background: var(--alert-tint);
+  color: var(--alert-ink);
+}
+
+.failed svg {
+  flex: none;
+  margin-top: 3px;
 }

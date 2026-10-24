@@ -13,9 +13,31 @@
   width: min(720px, calc(100vw - 2 * var(--space-2)));
 }
 
-/* ::backdrop inherits custom properties only in newer browsers, so it carries a fallback. */
+/* ::backdrop inherits custom properties only in newer browsers, so it carries fallbacks. */
 .dialog::backdrop {
   background: var(--backdrop, rgb(16 20 18 / 0.55));
+}
+
+/* Opening eases in; closing is instant, so focus is never left on something fading out. */
+.dialog[open] {
+  animation: dialog-in var(--motion-base) var(--ease-standard);
+}
+
+.dialog[open]::backdrop {
+  animation: backdrop-in var(--motion-base, 200ms) linear;
+}
+
+@keyframes dialog-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .header {

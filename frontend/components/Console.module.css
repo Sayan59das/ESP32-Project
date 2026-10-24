@@ -81,10 +81,6 @@
   white-space: nowrap;
 }
 
-.notice {
-  font-weight: var(--weight-bold);
-}
-
 /* Wide: the three panels share one row, which leaves the log more height. */
 @media (min-width: 1600px) {
   .side {

@@ -24,10 +24,12 @@ interface Row {
 export function ItemBreakdown({
   items,
   counts,
+  unavailable,
   className,
 }: {
   items: ItemCount[];
   counts: Counts | null;
+  unavailable: boolean;
   className?: string;
 }) {
   const total = counts?.total_sorted ?? 0;
@@ -59,10 +61,12 @@ export function ItemBreakdown({
       title="By item"
       titleId="by-item-title"
       className={className}
-      busy={counts === null}
+      busy={counts === null && !unavailable}
       note={counts !== null && total === 0 ? copy.sharesLater : undefined}
     >
-      {counts === null ? (
+      {counts === null && unavailable ? (
+        <p className={styles.unavailable}>{copy.unavailable}</p>
+      ) : counts === null ? (
         <div className={styles.loading} aria-hidden="true">
           <Skeleton height="1.5rem" />
           <Skeleton height="1.5rem" />

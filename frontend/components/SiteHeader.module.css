@@ -60,18 +60,6 @@
   margin-left: auto;
 }
 
-.notice {
-  border-top: var(--border);
-  background: var(--signal-tint);
-  color: var(--signal-ink);
-}
-
-.notice > * {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: var(--space-1) var(--gutter);
-}
-
 @media (max-width: 640px) {
   .bar {
     gap: var(--space-1) var(--space-2);
@@ -81,9 +69,5 @@
   .tools {
     width: 100%;
     margin-left: 0;
-  }
-
-  .notice > * {
-    padding: var(--space-1) var(--space-2);
   }
 }

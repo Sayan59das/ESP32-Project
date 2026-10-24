@@ -103,6 +103,27 @@ test.describe('console against the simulator', () => {
   });
 });
 
+// The highlight appears only when a count changes after the page loads; sim events come
+// every 3 to 9 s.
+async function highlightMs(page: Page): Promise<number> {
+  const flash = page.getByTestId('count-highlight').first();
+  await expect(flash).toBeAttached({ timeout: 45_000 });
+  return flash.evaluate((el) => parseFloat(getComputedStyle(el).animationDuration) * 1000);
+}
+
+test('a count change is highlighted for no more than 300 ms', async ({ page }) => {
+  await page.goto('/');
+  const ms = await highlightMs(page);
+  expect(ms).toBeGreaterThan(0);
+  expect(ms).toBeLessThanOrEqual(300);
+});
+
+test('reduced motion removes the count-change highlight', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  expect(await highlightMs(page)).toBe(0);
+});
+
 for (const [width, height] of [
   [1280, 800],
   [1024, 768],

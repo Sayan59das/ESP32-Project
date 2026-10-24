@@ -20,6 +20,8 @@
 .tile {
   --tile-pad: var(--space-2);
 
+  position: relative;
+  isolation: isolate;
   display: grid;
   gap: var(--space-half);
   align-content: start;
@@ -67,6 +69,42 @@
   display: inline-block;
 }
 
+/* The count-change highlight, 250ms and never looped: the tile brightens behind the digits
+   (isolation keeps it under the text) and the new number settles into place. The number is
+   the server's from the first frame; nothing counts up. Reduced motion removes both. */
+.flash {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgb(255 255 255 / 0.24);
+  pointer-events: none;
+  animation: flash-out var(--motion-highlight) var(--ease-standard) both;
+}
+
+.digitsChanged {
+  animation: settle var(--motion-highlight) var(--ease-standard) both;
+}
+
+@keyframes flash-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes settle {
+  from {
+    transform: translateY(0.06em);
+  }
+}
+
+.unavailable {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-stretch: var(--display-wdth);
+  font-weight: var(--weight-bold);
+  line-height: 1.1;
+}
+
 .share {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
@@ -75,6 +113,8 @@
 /* Unsure: a normal outcome, not a fault. Amber, a question mark, and the words "not
    counted", on a full-width row beneath the two bins. */
 .unsure {
+  position: relative;
+  isolation: isolate;
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -95,6 +135,11 @@
 
 .unsureNote {
   font-size: var(--text-sm);
+}
+
+.unsure .flash {
+  background: var(--unsure);
+  opacity: 0.45;
 }
 
 .unsureCount {

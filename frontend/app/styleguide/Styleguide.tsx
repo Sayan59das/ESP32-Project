@@ -2,14 +2,17 @@
 
 import { useRef, useState } from 'react';
 
+import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { SiteHeader } from '@/components/SiteHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { Skeleton, SkeletonLines } from '@/components/ui/Skeleton';
 import { VisuallyHidden } from '@/components/ui/VisuallyHidden';
+import { copy } from '@/lib/copy';
 
 import styles from './styleguide.module.css';
 
@@ -40,6 +43,7 @@ const ICONS: IconName[] = [
   'inView',
   'counted',
   'waiting',
+  'remove',
   'signal',
   'alert',
   'reset',
@@ -146,6 +150,31 @@ export function Styleguide() {
           <div className={styles.loading}>
             <Skeleton width={96} height={96} />
             <SkeletonLines lines={3} />
+          </div>
+        </Card>
+
+        <Card title="States" titleId="sg-states">
+          <div className={styles.states}>
+            <ConnectionBanner
+              notice={{
+                kind: 'paused',
+                title: copy.pausedTitle,
+                body: `${copy.pausedBody('12 s')} ${copy.lastKnownCounts}`,
+              }}
+            />
+            <ConnectionBanner
+              notice={{
+                kind: 'unreachable',
+                title: copy.unreachableTitle,
+                body: `${copy.backendUnreachable('http://localhost:8000')} ${copy.retrying}`,
+              }}
+            />
+            <EmptyState icon="waiting" title={copy.emptyRecentTitle}>
+              <p>{copy.emptyRecent}</p>
+            </EmptyState>
+            <EmptyState icon="alert" title={copy.linkUnreachable}>
+              <p>{copy.unavailable}</p>
+            </EmptyState>
           </div>
         </Card>
 

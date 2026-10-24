@@ -7,10 +7,22 @@ export const copy = {
     'This resets the counts on screen. The current run stays saved and in the CSV export.',
   confirmKeep: 'Keep current run',
   newRunStarted: 'New run started.',
+  newRunFailed:
+    'The new run did not start: the classifier service did not answer. The current run continues.',
   exportCsv: 'Export CSV',
   exportNote: 'Every event of every run, with confidence and inference time.',
-  emptyLastItem: 'No items sorted yet. Place an object in front of the camera.',
-  emptyRecent: 'Sorted items will appear here.',
+  emptyLastItem: 'No items sorted yet',
+  emptyRecentTitle: 'Nothing in this run yet',
+  emptyRecent: 'Sorted items will appear here, newest first.',
+  // The counting rhythm, taught on an empty run.
+  rhythm: [
+    'Place one item in front of the camera.',
+    'Hold it still until the verdict shows.',
+    'It is counted in its bin, or marked unsure and left out.',
+    'Remove it before the next item.',
+  ],
+  unavailable: 'Not available while the classifier service is unreachable.',
+  noCounts: 'No counts',
   logCap: (n: number) => `The latest ${n} items. Export CSV for the whole run.`,
   nothingSorted: 'Nothing sorted yet',
   sharesLater: 'Shares appear once an item is sorted.',
@@ -54,14 +66,31 @@ export const copy = {
     'This page needs https or localhost to use the camera. Open it at http://localhost:3000.',
 
   backendUnreachable: (url: string) =>
-    `Can't reach the classifier service at ${url}. Start it with run_all.bat`,
+    `Can't reach the classifier service at ${url}. Start it with run_all.bat.`,
+
+  // The header notice while live data is not flowing.
+  unreachableTitle: 'Classifier service unreachable',
+  retrying: 'The console keeps trying by itself.',
+  pausedTitle: 'Live updates paused',
+  pausedBody: (since: string) =>
+    `The live connection dropped ${since} ago and is reconnecting by itself.`,
+  lastKnownCounts: 'The counts shown are the last ones received and may be behind.',
+  liveResumed: 'Live updates resumed.',
+
+  errorTitle: 'Something went wrong on this page',
+  errorBody: 'The page hit an error and stopped updating.',
+  errorCountsSafe: 'The counts are safe: the classifier service keeps them, not this page.',
+  errorRetry: 'Try again',
+  errorReload: 'Reload the console',
+  notFoundTitle: 'Page not found',
+  notFoundBody: 'There is no page at this address.',
 
   linkOpen: 'Linked',
   linkClosed: 'Not linked',
   heartbeatStale: 'Camera not responding',
   linkReconnecting: 'Reconnecting',
   linkUnreachable: 'Service unreachable',
-  streamPaused: 'Live updates paused. Reconnecting.',
+  streamPaused: 'Live updates paused. Reconnecting by itself.',
   deviceReset: (n: number) =>
     n === 1
       ? 'The camera board restarted once during this run. Counts before and after are kept.'

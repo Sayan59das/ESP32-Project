@@ -12,6 +12,7 @@ const paths = {
   inView: 'M3 8V3h5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5 M9 9h6v6H9z', // a framed object
   counted: 'M5 12.5l4.5 4.5L19 7', // a tick
   waiting: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 7v5l3 2', // a clock
+  remove: 'M13 4H4v16h9 M9 12h12 M17 8l4 4-4 4', // an arrow out of the frame
   // System
   signal: 'M3 12h4l2-6 4 12 2-6h6', // a pulse: the link is alive
   alert: 'M12 3L2 21h20z M12 10v5 M12 18v1',

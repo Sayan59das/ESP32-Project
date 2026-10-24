@@ -95,3 +95,8 @@
   display: grid;
   gap: var(--space-1-5);
 }
+
+.unavailable {
+  max-width: var(--measure);
+  color: var(--ink-muted);
+}

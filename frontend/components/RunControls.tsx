@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { API_BASE, ApiError, api, urls } from '@/lib/api';
+import { ApiError, api, urls } from '@/lib/api';
 import { copy } from '@/lib/copy';
 import { shortTime } from '@/lib/format';
 import type { Run, State } from '@/lib/types';
@@ -17,15 +17,15 @@ const CONFIRMATION_MS = 4000;
 export function RunControls({
   run,
   onStarted,
-  announce,
 }: {
   run: Run | null;
   onStarted: (state: State) => void;
-  announce: (message: string) => void;
 }) {
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // A failure stays until the next attempt: it must not vanish before it is read.
+  const [failed, setFailed] = useState(false);
   const keep = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -37,14 +37,14 @@ export function RunControls({
   // The server starts the run and answers with the new state; nothing is reset here.
   const confirm = async () => {
     setBusy(true);
+    setFailed(false);
     try {
       const state = await api.startNewRun();
       onStarted(state);
       setNotice(copy.newRunStarted);
-      announce(copy.newRunStarted);
     } catch (error) {
       if (!(error instanceof ApiError)) throw error;
-      setNotice(copy.backendUnreachable(API_BASE));
+      setFailed(true);
     } finally {
       setBusy(false);
       setAsking(false);
@@ -71,12 +71,19 @@ export function RunControls({
           <span>{copy.exportCsv}</span>
         </a>
       </div>
-      <p className={styles.note}>{copy.exportNote}</p>
-      {notice !== null ? (
-        <p className={styles.notice} role="status">
-          {notice}
-        </p>
-      ) : null}
+      <div>
+        <p className={styles.note}>{copy.exportNote}</p>
+        {/* Always in the page, so screen readers hear what appears in it. */}
+        <div role="status" className={styles.status}>
+          {notice !== null ? <p className={styles.notice}>{notice}</p> : null}
+          {failed ? (
+            <p className={styles.failed}>
+              <Icon name="alert" size={18} />
+              <span>{copy.newRunFailed}</span>
+            </p>
+          ) : null}
+        </div>
+      </div>
       <Dialog
         open={asking}
         onClose={() => setAsking(false)}

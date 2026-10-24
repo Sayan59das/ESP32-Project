@@ -110,6 +110,11 @@
   max-width: 480px;
 }
 
+.states {
+  display: grid;
+  gap: var(--space-3);
+}
+
 .icons {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));

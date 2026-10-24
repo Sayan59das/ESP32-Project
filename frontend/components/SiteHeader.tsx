@@ -43,12 +43,13 @@ export function SiteHeader({
   meta,
   notice,
 }: {
-  current: Page;
+  /** The page being shown; left out on pages outside the navigation, such as a 404. */
+  current?: Page;
   /** The run's source; null while unknown, left out on pages without live data. */
   source?: SourceName | null;
   /** Run information and the link badge. */
   meta?: ReactNode;
-  /** A line that must not be missed, such as paused live updates. */
+  /** A full-width line that must not be missed, such as paused live updates. */
   notice?: ReactNode;
 }) {
   return (
@@ -76,7 +77,7 @@ export function SiteHeader({
           <ThemeToggle />
         </div>
       </div>
-      {notice ? <div className={styles.notice}>{notice}</div> : null}
+      {notice}
     </header>
   );
 }
