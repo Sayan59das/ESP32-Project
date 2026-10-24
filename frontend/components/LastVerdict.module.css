@@ -203,3 +203,16 @@
     font-size: var(--text-2xl);
   }
 }
+
+/* The frame beside the details where the card is wide enough for both, above them where
+   it is not, so the verdict word and badge never run out of the card. */
+.box {
+  container-type: inline-size;
+}
+
+@container (max-width: 24rem) {
+  .verdict {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1-5);
+  }
+}

@@ -12,6 +12,7 @@ export type CameraState =
   | 'not-responding' // the link is open but heartbeats stopped
   | 'counted' // a verdict arrived a moment ago
   | 'unsure' // a verdict arrived a moment ago, too unsure to count
+  | 'preview-paused' // the viewer paused the picture here; counting carries on
   | 'waiting' // linked, no frames yet
   | 'no-frames' // linked, still no frames after a while
   | 'ready'; // linked and frames are flowing: place an item
@@ -23,6 +24,8 @@ export interface CameraInputs {
   linkLabel: LinkLabel;
   /** The verdict held on screen, if any. */
   verdict: Event | null;
+  /** The viewer paused the live preview on this screen. */
+  previewPaused: boolean;
   /** Whether preview frames are reaching the page. */
   framesFlowing: boolean;
   /** Whether frames have been missing long enough to say so. */
@@ -36,6 +39,8 @@ export function cameraState(i: CameraInputs): CameraState {
   if (!i.link.source_open) return 'not-linked';
   if (i.linkLabel === 'stale') return 'not-responding';
   if (i.verdict !== null) return i.verdict.bin === 'unsure' ? 'unsure' : 'counted';
+  // A paused preview receives no frames by design, so missing frames are not a fault.
+  if (i.previewPaused) return 'preview-paused';
   if (!i.framesFlowing) return i.framesOverdue ? 'no-frames' : 'waiting';
   return 'ready';
 }

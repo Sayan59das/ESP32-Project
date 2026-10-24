@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { verdictAnnouncement } from '@/lib/announce';
 import { connectionNotice } from '@/lib/connection';
@@ -25,11 +25,22 @@ import { SiteHeader } from './SiteHeader';
 export function Console() {
   const { state, dispatch, now, connection } = useConsole();
   const [announcement, announce] = useAnnouncer();
+  // The viewer's own pause of the live picture. Never remembered across loads, so a fresh
+  // console always shows the camera.
+  const [previewPaused, setPreviewPaused] = useState(false);
   const server = state.server;
   const items: ItemCount[] = server?.by_item ?? [];
   const paused = isPaused(state, now);
   const runSource = server?.run.source ?? null;
-  const link = linkView(state, now);
+  const link = linkView(state, now, previewPaused);
+
+  const togglePreview = useCallback(
+    (next: boolean) => {
+      setPreviewPaused(next);
+      announce(next ? `${copy.previewPausedTitle}. Counting continues.` : 'Preview resumed.');
+    },
+    [announce],
+  );
   const notice = connectionNotice(state, now);
   // Before the first state: loading while the service may still answer, unavailable once
   // it is known not to. Skeletons never stand in for data that is not coming.
@@ -83,13 +94,15 @@ export function Console() {
         }
         notice={notice !== null ? <ConnectionBanner notice={notice} /> : null}
       />
-      <main className={styles.main}>
+      <main id="main" className={styles.main}>
         <h1 className="visually-hidden">EcoSort Edge console</h1>
         <div className={styles.stage}>
           <CameraWindow
             link={server?.link ?? null}
             linkLabel={linkLabel(state, now)}
             paused={paused}
+            previewPaused={previewPaused}
+            onPreviewPausedChange={togglePreview}
             runSource={runSource}
             backendUnreachable={state.backendUnreachable}
             latest={state.latest}

@@ -100,3 +100,16 @@
   max-width: var(--measure);
   color: var(--ink-muted);
 }
+
+/* At 320 wide (400% zoom of 1280) the three columns only fit if names may wrap. */
+@media (max-width: 360px) {
+  .item,
+  .number {
+    white-space: normal;
+  }
+
+  .headNumber,
+  .number {
+    padding-left: var(--space-1);
+  }
+}

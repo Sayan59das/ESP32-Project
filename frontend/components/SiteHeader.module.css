@@ -1,6 +1,26 @@
 .header {
+  position: relative;
   border-bottom: var(--border);
   background: var(--surface);
+}
+
+/* Off screen until focused, then over the top-left of the bar. */
+.skip {
+  position: absolute;
+  top: var(--space-1);
+  left: var(--space-1);
+  z-index: 10;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: var(--surface);
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip:focus {
+  transform: none;
 }
 
 .bar {
@@ -31,8 +51,11 @@
   list-style: none;
 }
 
+/* Padded to a comfortable target: 33px tall, not just the line of text. */
 .link,
 .linkCurrent {
+  display: inline-block;
+  padding: 6px 2px;
   color: var(--ink);
   text-underline-offset: 6px;
 }

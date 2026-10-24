@@ -155,6 +155,7 @@ const CHIP_ICONS: Record<CameraState, IconName> = {
   'not-linked': 'alert',
   'not-responding': 'alert',
   unreachable: 'alert',
+  'preview-paused': 'pause',
 };
 
 /** The message and next step for a camera state that stops the counting loop. */
@@ -175,6 +176,9 @@ interface Props {
   link: Link | null;
   linkLabel: LinkLabel;
   paused: boolean;
+  /** The viewer paused the live picture. Counting is not affected. */
+  previewPaused: boolean;
+  onPreviewPausedChange: (paused: boolean) => void;
   runSource: SourceName | null;
   backendUnreachable: boolean;
   latest: { event: Event; at: number } | null;
@@ -188,6 +192,8 @@ export function CameraWindow({
   link,
   linkLabel,
   paused,
+  previewPaused,
+  onPreviewPausedChange,
   runSource,
   backendUnreachable,
   latest,
@@ -207,11 +213,12 @@ export function CameraWindow({
     if (readStored(SOURCE_KEY) === 'webcam') setSource('webcam');
   }, []);
 
-  // A new stream connection (for example after the bridge restarts) gets a fresh feed.
+  // A new stream connection (for example after the bridge restarts) gets a fresh feed, and
+  // so does resuming the preview: frames get the usual time to arrive before "No frames".
   useEffect(() => {
     setFeedFailed(false);
     setViewSince(Date.now());
-  }, [connection, source]);
+  }, [connection, source, previewPaused]);
 
   // Hold the exact frame the model classified for a moment, with its verdict.
   useEffect(() => {
@@ -232,16 +239,28 @@ export function CameraWindow({
     link,
     linkLabel,
     verdict,
+    previewPaused,
     framesFlowing: !feedFailed && (link?.preview_fps ?? 0) > 0,
     framesOverdue: now - viewSince >= NO_FRAMES_AFTER_MS,
   });
 
   const classifier = source === 'classifier';
   const fault = classifier && isFault(state) ? faultMessage(state, link) : null;
+  const pausedMessage =
+    previewPaused && (!classifier || state === 'preview-paused') ? copy.previewPausedBody : null;
   const webcamMessage =
-    !classifier && webcamStatus !== 'live' ? webcamMessages[webcamStatus] : null;
+    !classifier && !previewPaused && webcamStatus !== 'live' ? webcamMessages[webcamStatus] : null;
   const waitingMessage =
     classifier && (state === 'waiting' || state === 'connecting') ? copy.classifierWaiting : null;
+  const message = fault ?? pausedMessage ?? webcamMessage ?? waitingMessage;
+  const messageTitle =
+    fault === null && pausedMessage !== null
+      ? copy.previewPausedTitle
+      : classifier
+        ? copy.chip[state]
+        : copy.webcamTitle;
+  const chipKey = classifier ? state : previewPaused ? 'preview-paused' : 'webcam';
+  const chipIcon: IconName = classifier ? CHIP_ICONS[state] : previewPaused ? 'pause' : 'camera';
 
   const simulatedTag =
     runSource === 'sim' ? copy.simulatedBanner : runSource === 'replay' ? copy.replayBanner : null;
@@ -258,28 +277,42 @@ export function CameraWindow({
           <Icon name="camera" size={20} />
           {classifier ? copy.classifierTitle : copy.webcamTitle}
         </h2>
-        <fieldset className={styles.toggle}>
-          <legend className="visually-hidden">Image source</legend>
-          {(['classifier', 'webcam'] as const).map((option) => (
-            <label
-              key={option}
-              className={option === source ? `${styles.option} ${styles.optionOn}` : styles.option}
-            >
-              <input
-                type="radio"
-                name="image-source"
-                className={styles.radio}
-                checked={option === source}
-                onChange={() => choose(option)}
-              />
-              {option === 'classifier' ? copy.sourceClassifier : copy.sourceWebcam}
-            </label>
-          ))}
-        </fieldset>
+        <div className={styles.controls}>
+          <fieldset className={styles.toggle}>
+            <legend className="visually-hidden">Image source</legend>
+            {(['classifier', 'webcam'] as const).map((option) => (
+              <label
+                key={option}
+                className={
+                  option === source ? `${styles.option} ${styles.optionOn}` : styles.option
+                }
+              >
+                <input
+                  type="radio"
+                  name="image-source"
+                  className={styles.radio}
+                  checked={option === source}
+                  onChange={() => choose(option)}
+                />
+                {option === 'classifier' ? copy.sourceClassifier : copy.sourceWebcam}
+              </label>
+            ))}
+          </fieldset>
+          {/* WCAG 2.2.2: live moving content gets a way to stop it. */}
+          <button
+            type="button"
+            className={styles.pause}
+            aria-label={previewPaused ? copy.resumePreviewLabel : copy.pausePreviewLabel}
+            onClick={() => onPreviewPausedChange(!previewPaused)}
+          >
+            <Icon name={previewPaused ? 'play' : 'pause'} size={16} />
+            <span>{previewPaused ? copy.resumePreview : copy.pausePreview}</span>
+          </button>
+        </div>
         <p className={styles.note}>{classifier ? copy.classifierNote : copy.webcamNote}</p>
       </div>
       <div className={styles.viewport} data-testid="camera-viewport">
-        {classifier && pageLoaded && !backendUnreachable ? (
+        {classifier && pageLoaded && !backendUnreachable && !previewPaused ? (
           // eslint-disable-next-line @next/next/no-img-element -- a live MJPEG stream
           <img
             key={connection}
@@ -289,7 +322,7 @@ export function CameraWindow({
             onError={() => setFeedFailed(true)}
           />
         ) : null}
-        {!classifier ? <Webcam onStatus={setWebcamStatus} /> : null}
+        {!classifier && !previewPaused ? <Webcam onStatus={setWebcamStatus} /> : null}
         {verdict !== null && classifier && verdict.has_frame ? (
           // eslint-disable-next-line @next/next/no-img-element -- a stored PNG, drawn pixelated
           <img
@@ -302,15 +335,16 @@ export function CameraWindow({
         {/* Viewfinder marks: this is an instrument's view, not a video player. */}
         <span className={styles.corners} aria-hidden="true" />
 
-        {fault !== null || webcamMessage !== null || waitingMessage !== null ? (
+        {message !== null ? (
           <div
             className={fault !== null ? `${styles.message} ${styles.messageFault}` : styles.message}
           >
-            <Icon name={fault !== null ? 'alert' : 'waiting'} size={28} />
-            <p className={styles.messageTitle}>
-              {classifier ? copy.chip[state] : copy.webcamTitle}
-            </p>
-            <p className={styles.messageBody}>{fault ?? webcamMessage ?? waitingMessage}</p>
+            <Icon
+              name={fault !== null ? 'alert' : pausedMessage !== null ? 'pause' : 'waiting'}
+              size={28}
+            />
+            <p className={styles.messageTitle}>{messageTitle}</p>
+            <p className={styles.messageBody}>{message}</p>
           </div>
         ) : null}
 
@@ -320,9 +354,13 @@ export function CameraWindow({
               {simulatedTag}
             </Badge>
           ) : null}
-          <p className={`${styles.chip} ${styles[`chip-${classifier ? state : 'webcam'}`] ?? ''}`}>
-            <Icon name={classifier ? CHIP_ICONS[state] : 'camera'} size={16} />
-            <span>{classifier ? copy.chip[state] : copy.chip.webcam}</span>
+          {/* When a message is showing, its title already says this; read it once. */}
+          <p
+            className={`${styles.chip} ${styles[`chip-${chipKey}`] ?? ''}`}
+            aria-hidden={message !== null || undefined}
+          >
+            <Icon name={chipIcon} size={16} />
+            <span>{copy.chip[chipKey]}</span>
           </p>
         </div>
 

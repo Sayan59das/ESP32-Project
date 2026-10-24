@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { ErrorScreen } from '@/components/ErrorScreen';
 import { Button } from '@/components/ui/Button';
 import { copy } from '@/lib/copy';
@@ -13,6 +15,15 @@ export default function PageError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // The tab title says what happened too (WCAG 2.4.2), and goes back when the page does.
+  useEffect(() => {
+    const before = document.title;
+    document.title = `${copy.errorTitle}, EcoSort Edge`;
+    return () => {
+      document.title = before;
+    };
+  }, []);
+
   return (
     <ErrorScreen
       title={copy.errorTitle}

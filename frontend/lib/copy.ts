@@ -45,8 +45,20 @@ export const copy = {
     'not-linked': 'Not linked',
     'not-responding': 'Camera not responding',
     unreachable: 'Service unreachable',
+    'preview-paused': 'Preview paused',
     webcam: 'Webcam, not used by the classifier',
   },
+
+  // Pausing stops the picture on this screen only; the camera bridge keeps counting.
+  pausePreview: 'Pause',
+  pausePreviewLabel: 'Pause preview',
+  resumePreview: 'Resume',
+  resumePreviewLabel: 'Resume preview',
+  previewPausedTitle: 'Preview paused',
+  previewPausedBody:
+    'Counting continues and verdicts still show here. Choose Resume to see the camera again.',
+  linkPreviewPaused: 'Preview paused on this screen.',
+  skipToMain: 'Skip to main content',
 
   classifierWaiting: 'Waiting for the first frame from the camera.',
   classifierNoFrames:

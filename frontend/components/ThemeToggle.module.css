@@ -30,3 +30,12 @@
   background: var(--ink);
   color: var(--surface);
 }
+
+/* High-contrast modes drop backgrounds, which would hide the chosen option. */
+@media (forced-colors: active) {
+  .option[aria-pressed='true'] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+}

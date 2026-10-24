@@ -22,7 +22,7 @@ export default function GlobalError({
   return (
     <html lang="en-GB" className={fontVariables} suppressHydrationWarning>
       <head>
-        <title>EcoSort Edge</title>
+        <title>{`${copy.errorTitle}, EcoSort Edge`}</title>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>

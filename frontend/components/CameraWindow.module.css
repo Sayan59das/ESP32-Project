@@ -33,6 +33,31 @@
   line-height: 1.4;
 }
 
+.controls {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+/* Pause and resume the live picture. Same weight as the source switch beside it. */
+.pause {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: var(--space-half) var(--space-1-5);
+  border: 1px solid var(--on-video-muted);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--on-video);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+.pause:hover {
+  background: color-mix(in srgb, var(--on-video) 12%, transparent);
+}
+
 /* Source switch: a two-way segmented control. The chosen side is filled. */
 .toggle {
   display: inline-flex;
@@ -63,6 +88,15 @@
 .optionOn {
   background: var(--on-video);
   color: var(--video-bed);
+}
+
+/* High-contrast modes drop backgrounds, which would hide the chosen side. */
+@media (forced-colors: active) {
+  .optionOn {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
 }
 
 .radio {

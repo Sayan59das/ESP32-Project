@@ -32,7 +32,7 @@ export function ErrorScreen({
       ) : (
         <SiteHeader />
       )}
-      <main className={styles.main}>
+      <main id="main" className={styles.main}>
         <div className={styles.panel}>
           {icon ? <Icon name={icon} size={32} className={styles.icon} /> : null}
           <h1 className={styles.title}>{title}</h1>

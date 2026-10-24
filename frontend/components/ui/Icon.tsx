@@ -21,6 +21,8 @@ const paths = {
   replay: 'M4 4v6h6 M5 15a8 8 0 1 0 1.8-8.2L4 10',
   // Actions and theme
   download: 'M12 3v12 M7 10l5 5 5-5 M4 20h16',
+  pause: 'M8 5v14 M16 5v14',
+  play: 'M7 4l13 8-13 8z',
   plus: 'M12 5v14 M5 12h14',
   close: 'M6 6l12 12 M18 6L6 18',
   sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M12 2v2 M12 20v2 M4.9 4.9l1.4 1.4 M17.7 17.7l1.4 1.4 M2 12h2 M20 12h2 M4.9 19.1l1.4-1.4 M17.7 6.3l1.4-1.4',

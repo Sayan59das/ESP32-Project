@@ -40,11 +40,13 @@ test('the contents list links to every section', async ({ page }) => {
   await expect(page).toHaveURL(/#results$/);
 });
 
+// The brief's four widths, plus 320: 1280 at 400% zoom, where WCAG 1.4.10 asks for reflow.
 for (const [width, height] of [
   [1280, 800],
   [1024, 768],
   [768, 1024],
   [390, 844],
+  [320, 640],
 ] as const) {
   test(`the project page has no horizontal scroll at ${width} wide`, async ({ page }) => {
     await page.setViewportSize({ width, height });

@@ -124,11 +124,39 @@ test('reduced motion removes the count-change highlight', async ({ page }) => {
   expect(await highlightMs(page)).toBe(0);
 });
 
+test('with WCAG 1.4.12 text spacing the counters still fit inside their tiles', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await firstThumbnail(page);
+  await page.addStyleTag({
+    content:
+      '* { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }',
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        ['recyclable', 'trash'].every((bin) => {
+          const digits = document.querySelector(`[data-testid="count-${bin}"]`);
+          const tile = digits?.closest('section');
+          if (!digits || !tile) return false;
+          const d = digits.getBoundingClientRect();
+          const t = tile.getBoundingClientRect();
+          return d.left >= t.left - 0.5 && d.right <= t.right + 0.5;
+        }),
+      ),
+    )
+    .toBe(true);
+});
+
+// The brief's four widths, plus 320: 1280 at 400% zoom, where WCAG 1.4.10 asks for reflow.
 for (const [width, height] of [
   [1280, 800],
   [1024, 768],
   [768, 1024],
   [390, 844],
+  [320, 640],
 ] as const) {
   test(`no horizontal scroll at ${width} wide`, async ({ page }) => {
     await page.setViewportSize({ width, height });

@@ -123,11 +123,17 @@ export function EventLog({
           </EmptyState>
         )
       ) : (
-        <div className={styles.scroller} role="region" aria-labelledby="recent-title" tabIndex={0}>
+        // Named by the table's caption, not the card title, so the scrollable region and the
+        // card around it do not share a name.
+        <div
+          className={styles.scroller}
+          role="region"
+          aria-labelledby="recent-caption"
+          tabIndex={0}
+        >
           <table className={styles.table}>
-            <caption className="visually-hidden">
-              Recent verdicts, newest first: frame, time, verdict, confidence and model inference
-              time.
+            <caption id="recent-caption" className="visually-hidden">
+              Recent verdicts, newest first
             </caption>
             <thead>
               <tr>

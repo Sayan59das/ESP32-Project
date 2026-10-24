@@ -54,6 +54,11 @@ export function SiteHeader({
 }) {
   return (
     <header className={styles.header}>
+      {/* The first stop for Tab on every page; hidden until it has focus. Every page that
+          uses this header has <main id="main">. */}
+      <a href="#main" className={styles.skip}>
+        {copy.skipToMain}
+      </a>
       <div className={styles.bar}>
         <p className={styles.brand}>EcoSort Edge</p>
         {source ? <SourceBadge source={source} /> : null}

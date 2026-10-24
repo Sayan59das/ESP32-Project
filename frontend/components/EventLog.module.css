@@ -7,12 +7,14 @@
   padding-top: var(--space-1);
 }
 
+/* scroll-padding keeps a focused row clear of the sticky header (WCAG 2.4.11). */
 .scroller {
   flex: 1;
   min-height: 0;
   max-height: 100%;
   overflow: auto;
   border-radius: var(--radius-sm);
+  scroll-padding-top: 2.5rem;
 }
 
 .table {

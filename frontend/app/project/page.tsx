@@ -144,7 +144,7 @@ export default async function ProjectPage() {
   return (
     <>
       <SiteHeader current="project" />
-      <main className={styles.main}>
+      <main id="main" className={styles.main}>
         <div className={styles.intro}>
           <h1 className={styles.h1}>How EcoSort Edge works</h1>
           <p className={styles.lede}>
@@ -330,14 +330,17 @@ export default async function ProjectPage() {
                 Rows are the true item, columns what the model predicted. The diagonal, in bold, is
                 correct; the shading is each row&rsquo;s share.
               </p>
+              {/* Named by the caption, so it does not repeat the section's own name. */}
               <div
                 className={styles.scroll}
                 role="region"
-                aria-labelledby="confusion-title"
+                aria-labelledby="confusion-caption"
                 tabIndex={0}
               >
                 <table className={styles.matrix} aria-describedby="confusion-note">
-                  <caption className="visually-hidden">Confusion matrix on the test set</caption>
+                  <caption id="confusion-caption" className="visually-hidden">
+                    Confusion matrix on the test set
+                  </caption>
                   <thead>
                     <tr>
                       <td className={styles.corner} />

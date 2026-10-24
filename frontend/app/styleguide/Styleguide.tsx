@@ -50,6 +50,8 @@ const ICONS: IconName[] = [
   'simulated',
   'replay',
   'download',
+  'pause',
+  'play',
   'plus',
   'close',
   'sun',
@@ -63,7 +65,7 @@ export function Styleguide() {
   return (
     <div className={styles.page}>
       <SiteHeader current="console" source="sim" />
-      <main className={styles.main}>
+      <main id="main" className={styles.main}>
         <h1 className={styles.h1}>Tokens and primitives</h1>
 
         <Card title="Colour" titleId="sg-colour">

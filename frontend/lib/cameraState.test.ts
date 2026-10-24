@@ -37,6 +37,7 @@ const base: CameraInputs = {
   link: link(),
   linkLabel: 'open',
   verdict: null,
+  previewPaused: false,
   framesFlowing: true,
   framesOverdue: false,
 };
@@ -69,6 +70,14 @@ describe('cameraState', () => {
 
   it('is connecting before the first state arrives', () => {
     expect(cameraState({ ...base, link: null })).toBe('connecting');
+  });
+
+  it('never calls a paused preview missing frames, but still shows verdicts and faults', () => {
+    const paused = { ...base, previewPaused: true, framesFlowing: false, framesOverdue: true };
+    expect(cameraState(paused)).toBe('preview-paused');
+    expect(isFault(cameraState(paused))).toBe(false);
+    expect(cameraState({ ...paused, verdict: event('recyclable') })).toBe('counted');
+    expect(cameraState({ ...paused, linkLabel: 'stale' })).toBe('not-responding');
   });
 
   it('treats only the states that stop counting as faults', () => {

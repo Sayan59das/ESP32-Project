@@ -40,6 +40,12 @@ describe('linkView', () => {
     expect(linkTone(view.kind)).toBe('signal');
   });
 
+  it('says the preview is paused here instead of waiting for frames', () => {
+    const view = linkView(stateWith({ preview_active: false, preview_fps: null }), NOW, true);
+    expect(view.kind).toBe('linked');
+    expect(view.sentence).toBe('Preview paused on this screen. Last heartbeat 2 s ago.');
+  });
+
   it('says the camera is not responding once heartbeats stop', () => {
     const view = linkView(stateWith({ last_heartbeat_age_s: 20 }), NOW);
     expect(view.kind).toBe('not-responding');

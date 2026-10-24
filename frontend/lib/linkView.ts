@@ -26,15 +26,23 @@ const LABELS: Record<LinkKind, string> = {
   unreachable: copy.linkUnreachable,
 };
 
-function linkedSentence(fps: number | null, active: boolean, heartbeat: number | null): string {
-  const frames =
-    active && fps !== null && fps > 0
+function linkedSentence(
+  fps: number | null,
+  active: boolean,
+  heartbeat: number | null,
+  previewPaused: boolean,
+): string {
+  const frames = previewPaused
+    ? copy.linkPreviewPaused
+    : active && fps !== null && fps > 0
       ? `Frames arriving at ${fps} per second.`
       : 'Waiting for preview frames.';
   return `${frames} Last heartbeat ${age(heartbeat)}.`;
 }
 
-export function linkView(state: ConsoleState, now: number): LinkView {
+/** `previewPaused`: the viewer paused the picture on this screen, so no preview frames
+ *  arriving is expected rather than something to wait for. */
+export function linkView(state: ConsoleState, now: number, previewPaused = false): LinkView {
   const link = state.server?.link ?? null;
   const resets = link?.nano_resets_seen ?? 0;
   const make = (kind: LinkKind, sentence: string): LinkView => ({
@@ -56,7 +64,10 @@ export function linkView(state: ConsoleState, now: number): LinkView {
       `No heartbeat for ${duration(heartbeat)}. ${copy.cameraNotResponding}`,
     );
   }
-  return make('linked', linkedSentence(link.preview_fps, link.preview_active, heartbeat));
+  return make(
+    'linked',
+    linkedSentence(link.preview_fps, link.preview_active, heartbeat, previewPaused),
+  );
 }
 
 /** Faults get the alert tone; waiting states stay neutral. */
