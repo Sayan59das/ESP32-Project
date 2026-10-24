@@ -101,7 +101,8 @@ frontend/           the console (Next.js 14, React 18, TypeScript)
   app/project/        the "How EcoSort Edge works" page and Results
   components/         camera window, bin readout, last verdict, event log, breakdown, ...
   lib/                API client, SSE client, reducer, formatting, metrics parsing, copy text
-  e2e/                Playwright tests (smoke, accessibility, offline)
+  e2e/                Playwright tests (layout, states, keyboard, accessibility, offline)
+  DESIGN.md           tokens, components, outcome colours and icons, states
 
 firmware/           optional path: classify on an Arduino Nano instead of on the laptop
   ecosort_io/ecosort_io.h   the whole wire contract as one header
@@ -260,10 +261,16 @@ Next.js 14 (App Router), React 18, TypeScript. Typed from the server's OpenAPI s
 (`make types`).
 
 **Main page.** The camera window (a square view of the classifier's frame, with a source
-switch to a laptop webcam that the classifier does not use) with the bin readout flush beneath
-it at the same width. Next to it: the last verdict with its confidence and frame, the item
-breakdown, link status, run controls (new run, with a confirmation that explains the current
-run stays saved and exportable), and the event log with thumbnails that open in a dialog.
+switch to a laptop webcam that the classifier does not use, and a pause control for the
+picture) with the bin readout flush beneath it at the same width: two large counters,
+Recyclable (green) and Trash (slate), and an amber Unsure row that is counted in neither.
+Next to it: the last verdict with its confidence and frame, the item breakdown, link status,
+run controls (new run, with a confirmation that explains the current run stays saved and
+exportable), and the event log with thumbnails that open in a dialog. Every outcome is shown
+with an icon and a word as well as its colour. There is a light and a dark theme (following
+the system, with a switch). An empty run, paused live updates, an unreachable service, a
+camera that is not linked or not responding, and page errors each have their own message and
+next step. The design is documented in `frontend/DESIGN.md`.
 
 **Project page (`/project`).** A written explanation of the system with a flow diagram,
 results, a confusion matrix, limits, wiring and credits. It reads `data/metrics.json` on every
@@ -272,8 +279,10 @@ At the moment `data/metrics.json` has every key set to null, so those sections s
 "Not measured yet" until real figures are entered.
 
 **Quality bar.** WCAG 2.2 AA is checked automatically with axe, colour contrast is checked by
-`scripts/check_contrast.py`, the layout is tested at 1280, 1024, 768 and 390 pixels with no
-horizontal scrolling, and a test confirms that no page requests anything outside the machine.
+`scripts/check_contrast.py` for both themes, the layout is tested at 1280, 1024, 768, 390 and
+320 pixels with no horizontal scrolling, keyboard use is tested (a skip link, dialogs that
+keep focus and give it back), and a test confirms that no page requests anything outside the
+machine.
 
 ## 11. Optional: classify on the board instead of the laptop
 

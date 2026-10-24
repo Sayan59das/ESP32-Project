@@ -206,7 +206,7 @@ malformed value renders "Not measured yet"; nothing is estimated.
 
 ```sh
 make test     # about 300 backend tests, including parser fuzzing and a firmware contract test
-make e2e      # 16 browser tests against the simulator
+make e2e      # 44 browser tests against the simulator
 make lint
 ```
 
@@ -215,10 +215,10 @@ g++ against a fake `Serial` and decodes its output with the bridge's own parser,
 firmware and the bridge are checked against each other (skipped when no C++ compiler is on
 PATH). The browser tests check the camera window is square, the bin readout sits flush
 under it at the same width, the counts on screen match the API, the frame dialog shows the
-96x96 frame, nothing scrolls sideways at 1280, 1024, 768 or 390 pixels, axe finds no WCAG
-2.2 AA violations, and no page requests anything outside the machine.
-
-Measured on this build: Lighthouse accessibility 100 on `/` and 100 on `/project`.
+96x96 frame, nothing scrolls sideways at 1280, 1024, 768, 390 or 320 pixels, the empty,
+paused, unreachable and 404 states, keyboard use (skip link, dialogs, pausing the preview),
+that axe finds no WCAG 2.2 AA violations in the light and dark themes, and that no page
+requests anything outside the machine.
 
 ## What this does not do
 
@@ -238,6 +238,7 @@ Measured on this build: Lighthouse accessibility 100 on `/` and 100 on `/project
 backend/app/        FastAPI bridge: protocol parser, frames, store, hub, sources, routes
 backend/tests/      pytest suite
 frontend/           Next.js console: app/, components/, lib/, styles/, e2e/
+                    (tokens, components, outcome colours and states: frontend/DESIGN.md)
 Model/              the trained model and the camera bridge: camera_bridge.py, numpy_cnn.py,
                     presence.py, plus train.py, live.py and the dataset
 firmware/           ecosort_io.h for classifying on a Nano instead, its guide and host test
