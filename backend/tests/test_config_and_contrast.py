@@ -82,11 +82,29 @@ class TestContrastScript:
     def test_same_colour_is_1_to_1(self) -> None:
         assert check_contrast.contrast_ratio("#336699", "#336699") == pytest.approx(1.0)
 
-    def test_every_pairing_the_console_uses_passes(self) -> None:
-        failures = [r for r in check_contrast.evaluate() if not r.passed]
+    @pytest.mark.parametrize("theme", check_contrast.THEMES)
+    def test_every_pairing_the_console_uses_passes(self, theme: str) -> None:
+        failures = [r for r in check_contrast.evaluate(theme=theme) if not r.passed]
         assert not failures, [
             (r.pairing.foreground, r.pairing.background, round(r.ratio, 2)) for r in failures
         ]
+
+    def test_the_two_dark_blocks_hold_the_same_values(self) -> None:
+        assert check_contrast.dark_blocks_differ() == {}
+
+    def test_dark_overrides_light_and_keeps_what_it_does_not_set(self) -> None:
+        themes = check_contrast.load_themes()
+        assert themes["dark"]["ground"] != themes["light"]["ground"]
+        assert set(themes["light"]) <= set(themes["dark"])
+
+    def test_a_drifted_dark_block_is_reported(self, tmp_path: Path) -> None:
+        css = Path(check_contrast.TOKENS_CSS).read_text(encoding="utf-8")
+        # Change the value in the first (system) dark block only.
+        system_start = css.index("@media (prefers-color-scheme: dark)")
+        head, tail = css[:system_start], css[system_start:]
+        drifted = tmp_path / "tokens.css"
+        drifted.write_text(head + tail.replace("--ink: #e6ebe7;", "--ink: #ffffff;", 1), "utf-8")
+        assert check_contrast.dark_blocks_differ(drifted) == {"ink": ("#ffffff", "#e6ebe7")}
 
     def test_ink_muted_clears_4_5_on_the_ground_as_the_plan_requires(self) -> None:
         ratio = check_contrast.contrast_ratio(
@@ -101,22 +119,22 @@ class TestContrastScript:
 
     def test_an_unknown_token_is_an_error_not_a_silent_pass(self) -> None:
         tokens = check_contrast.load_tokens()
-        del tokens["hivis"]
+        del tokens["unsure-mark"]
         with pytest.raises(KeyError):
             check_contrast.evaluate(tokens)
 
     def test_tokens_are_read_from_the_css_file(self) -> None:
         tokens = check_contrast.load_tokens()
-        assert tokens["bin-blue"] == "#0b5cad"
-        assert tokens["hivis"] == "#f2c100"
+        assert tokens["recyclable"] == "#1d6b45"
+        assert tokens["unsure"] == "#e0a019"
         assert {
             "ground",
             "surface",
             "ink",
             "ink-muted",
-            "bin-blue",
-            "bin-charcoal",
-            "hivis",
+            "recyclable",
+            "trash",
+            "unsure",
             "video-bed",
         } <= set(tokens)
 

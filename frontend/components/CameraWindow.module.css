@@ -2,7 +2,7 @@
   width: var(--stage-size);
   border-radius: var(--radius-camera) var(--radius-camera) 0 0;
   background: var(--video-bed);
-  color: var(--surface);
+  color: var(--on-video);
   overflow: hidden;
 }
 

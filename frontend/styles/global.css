@@ -8,17 +8,19 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  background: var(--ground);
 }
 
 body {
   margin: 0;
   background: var(--ground);
   color: var(--ink);
-  font-family: var(--font-sans);
-  font-size: var(--type-body-size);
-  font-weight: var(--type-body-wght);
-  font-stretch: calc(var(--type-body-wdth) * 1%);
-  line-height: var(--type-body-leading);
+  font-family: var(--font-text);
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-body);
+  /* Every number on the console is tabular, so a changing count never shifts its row. */
+  font-variant-numeric: tabular-nums;
 }
 
 h1,
@@ -34,8 +36,11 @@ figure {
 h1,
 h2,
 h3 {
+  font-family: var(--font-display);
   font-size: inherit;
-  font-weight: inherit;
+  font-weight: var(--weight-bold);
+  font-stretch: var(--display-wdth);
+  line-height: var(--leading-tight);
 }
 
 button,
@@ -53,14 +58,20 @@ table {
   border-collapse: collapse;
 }
 
-img {
+img,
+svg {
   display: block;
 }
 
+::selection {
+  background: var(--signal-tint);
+  color: var(--ink);
+}
+
+/* One focus ring everywhere: a 2px ring in --focus, clear of the element by 2px. */
 :focus-visible {
-  outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: var(--focus-ring-width);
-  box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring-offset);
+  outline: var(--focus-ring-width) solid var(--focus);
+  outline-offset: var(--focus-ring-offset-width);
 }
 
 .visually-hidden {
@@ -73,4 +84,24 @@ img {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* No motion at all when the viewer asks for less. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-highlight: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
 }

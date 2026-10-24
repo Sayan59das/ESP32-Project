@@ -1,0 +1,32 @@
+.group {
+  display: inline-flex;
+  border: var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.option {
+  display: grid;
+  width: 36px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  place-items: center;
+}
+
+.option + .option {
+  border-left: var(--border);
+}
+
+.option:hover {
+  background: var(--surface-sunk);
+  color: var(--ink);
+}
+
+/* The chosen option is filled, not only recoloured. */
+.option[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--surface);
+}

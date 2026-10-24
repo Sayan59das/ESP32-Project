@@ -1,0 +1,64 @@
+.button {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-text);
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.md {
+  min-height: 40px;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-md);
+}
+
+.sm {
+  min-height: 32px;
+  padding: var(--space-half) var(--space-1-5);
+  font-size: var(--text-sm);
+}
+
+/* Primary: ink on the page's opposite, the one strong action in a group. */
+.primary {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--ink-muted);
+}
+
+/* Secondary: a bordered button; the border alone clears 3:1 on every surface. */
+.secondary {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--surface-sunk);
+}
+
+/* Ghost: no border or fill until hovered, for low-weight actions inside panels. */
+.ghost {
+  background: transparent;
+  color: var(--ink);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--surface-sunk);
+}

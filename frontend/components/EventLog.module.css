@@ -106,7 +106,7 @@
 }
 
 .dialog::backdrop {
-  background: color-mix(in srgb, var(--ink) 60%, transparent);
+  background: var(--backdrop, rgb(16 20 18 / 0.55));
 }
 
 .bigFrame {

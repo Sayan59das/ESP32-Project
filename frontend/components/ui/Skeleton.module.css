@@ -1,0 +1,10 @@
+.skeleton {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+}
+
+.lines {
+  display: grid;
+  gap: var(--space-1);
+}

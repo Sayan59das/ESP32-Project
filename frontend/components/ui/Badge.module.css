@@ -1,0 +1,61 @@
+.badge {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-text);
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.md {
+  min-height: 28px;
+  padding: 2px var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.lg {
+  min-height: 36px;
+  padding: var(--space-half) var(--space-1-5);
+  font-size: var(--text-md);
+}
+
+.recyclable {
+  background: var(--recyclable-tint);
+  color: var(--recyclable-ink);
+}
+
+.trash {
+  background: var(--trash-tint);
+  color: var(--trash-ink);
+}
+
+/* Unsure is a normal outcome, not a fault: amber, with a question mark. */
+.unsure {
+  background: var(--unsure-tint);
+  color: var(--unsure-ink);
+}
+
+.signal {
+  background: var(--signal-tint);
+  color: var(--signal-ink);
+}
+
+.alert {
+  background: var(--alert-tint);
+  color: var(--alert-ink);
+}
+
+.neutral {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/* Inverse: the simulated and replay badge. It must never be missed or mistaken for live. */
+.inverse {
+  background: var(--ink);
+  color: var(--surface);
+}

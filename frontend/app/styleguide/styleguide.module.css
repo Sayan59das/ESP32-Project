@@ -1,0 +1,148 @@
+.page {
+  min-height: 100vh;
+}
+
+.main {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--gutter);
+}
+
+.h1 {
+  font-size: var(--text-3xl);
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-1-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.swatch {
+  display: grid;
+  gap: var(--space-half);
+  font-size: var(--text-sm);
+}
+
+.swatch code,
+.icons code {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: var(--text-sm);
+}
+
+.chip {
+  height: 48px;
+  border: var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr;
+  gap: var(--space-1);
+}
+
+.tile {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+}
+
+.tileRecyclable {
+  background: var(--recyclable);
+  color: var(--on-fill);
+}
+
+.tileTrash {
+  background: var(--trash);
+  color: var(--on-fill);
+}
+
+.tileUnsure {
+  background: var(--unsure-tint);
+  color: var(--unsure-ink);
+}
+
+.tileLabel {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  font-weight: var(--weight-bold);
+}
+
+.counter,
+.counterSmall {
+  font-family: var(--font-display);
+  font-stretch: var(--counter-wdth);
+  font-weight: var(--weight-heavy);
+  line-height: 0.9;
+}
+
+.counter {
+  font-size: var(--text-counter);
+}
+
+.counterSmall {
+  font-size: clamp(3rem, 5vw, 5rem);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+  align-items: center;
+}
+
+.row + .row {
+  margin-top: var(--space-2);
+}
+
+.loading {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--space-2);
+  max-width: 480px;
+}
+
+.icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.icons li {
+  display: grid;
+  gap: var(--space-half);
+  font-size: var(--text-sm);
+  justify-items: start;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-stretch: var(--display-wdth);
+  font-weight: var(--weight-bold);
+}
+
+.muted {
+  color: var(--ink-muted);
+}
+
+@media (max-width: 640px) {
+  .tiles {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tileUnsure {
+    grid-column: span 2;
+  }
+}

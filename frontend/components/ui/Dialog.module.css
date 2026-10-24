@@ -1,0 +1,66 @@
+.dialog {
+  width: min(480px, calc(100vw - 2 * var(--space-2)));
+  max-height: calc(100vh - 2 * var(--space-2));
+  padding: 0;
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--elevation-dialog);
+}
+
+.wide {
+  width: min(720px, calc(100vw - 2 * var(--space-2)));
+}
+
+/* ::backdrop inherits custom properties only in newer browsers, so it carries a fallback. */
+.dialog::backdrop {
+  background: var(--backdrop, rgb(16 20 18 / 0.55));
+}
+
+.header {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-3) 0;
+}
+
+.title {
+  font-size: var(--text-xl);
+}
+
+.close {
+  display: grid;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin: calc(-1 * var(--space-half)) calc(-1 * var(--space-1)) 0 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  place-items: center;
+}
+
+.close:hover {
+  background: var(--surface-sunk);
+}
+
+.description {
+  max-width: var(--measure);
+  padding: var(--space-1) var(--space-3) 0;
+  color: var(--ink);
+}
+
+.body {
+  padding: var(--space-2) var(--space-3) 0;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  justify-content: flex-end;
+  padding: var(--space-3);
+}

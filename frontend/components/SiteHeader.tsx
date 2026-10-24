@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import styles from './SiteHeader.module.css';
+import { ThemeToggle } from './ThemeToggle';
 
 type Page = 'console' | 'project';
 
@@ -38,7 +39,10 @@ export function SiteHeader({
           ))}
         </ul>
       </nav>
-      {children ? <div className={styles.tools}>{children}</div> : null}
+      <div className={styles.tools}>
+        {children}
+        <ThemeToggle />
+      </div>
     </header>
   );
 }

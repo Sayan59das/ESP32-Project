@@ -1,73 +1,229 @@
 /*
-  Design tokens. Light theme only.
+  Design tokens: "calm instrument panel".
 
-  Colour names and values are the ones in the design plan. --white is the one addition:
-  the plan asks for white text on the blue bin, but gives it no token, and a raw #fff in a
-  component would sit outside this file.
+  A warm-neutral ground, flat bordered surfaces, and exactly one hue per outcome:
+  recyclable is green, trash is slate, unsure is amber. Signal blue is for the system
+  itself (link, focus, live). Alert red is for faults only, never for an unsure verdict.
 
-  scripts/check_contrast.py reads this file. Change a hex here and it re-checks every
-  text and background pairing the console uses.
+  Themes: light is the default. Dark applies when the system asks for it, unless the
+  viewer picked light, or when the viewer picked dark (html[data-theme]). The two dark
+  blocks must stay identical; scripts/check_contrast.py fails if they drift apart, and it
+  re-checks every text and background pairing in both themes.
 */
 :root {
-  /* Colour */
-  --ground: #cfd6d8; /* cool concrete grey, page background */
-  --surface: #e6ebec; /* panels that hold lists and tables */
-  --ink: #14212b; /* primary text */
-  --ink-muted: #44535d; /* secondary text */
-  --bin-blue: #0b5cad; /* recyclable fill, white text on it */
-  --bin-charcoal: #2b3036; /* trash fill, --hivis numerals on it */
-  --hivis: #f2c100; /* trash numerals, new-row highlight, focus ring offset. Nothing else. */
-  --video-bed: #121a1f; /* behind the camera image only */
-  --white: #ffffff; /* text on the bin fills */
+  color-scheme: light;
 
-  /* Spacing: one 8px unit. */
-  --space-unit: 8px;
+  /* Colour: neutrals */
+  --ground: #f2f0ea; /* page background */
+  --surface: #fbfaf6; /* panels, header, dialogs */
+  --surface-sunk: #e9e6dd; /* table headers, insets, skeletons */
+  --ink: #1b211e; /* primary text */
+  --ink-muted: #545b56; /* secondary text */
+  --line: #d9d5ca; /* hairlines between rows, decorative only */
+  --line-strong: #767a72; /* control borders, at least 3:1 on every surface */
+
+  /* Colour: outcomes. Each has a fill (big counters), a tint and an ink (chips, rows). */
+  --recyclable: #1d6b45;
+  --recyclable-tint: #dcece2;
+  --recyclable-ink: #155234;
+  --trash: #4a535c;
+  --trash-tint: #e4e6e8;
+  --trash-ink: #39414a;
+  --unsure: #e0a019;
+  --unsure-tint: #f7e7c2;
+  --unsure-ink: #6b4500;
+  --on-fill: #ffffff; /* text on the recyclable and trash fills */
+  --on-unsure: #1b211e; /* text on the amber fill */
+  /* Marks: bars, icons and the confidence bar on a surface. Bright amber cannot reach
+     3:1 on a light surface, nor deep green on a dark one, so marks have their own values. */
+  --recyclable-mark: #1d6b45;
+  --trash-mark: #4a535c;
+  --unsure-mark: #9a6200;
+
+  /* Colour: system */
+  --signal: #1d5a8c; /* link lamp, live badge, focus ring */
+  --signal-tint: #dde8f2;
+  --signal-ink: #174a73;
+  --alert: #a3302a; /* faults: no link, camera not responding, reset */
+  --alert-tint: #f6e0dc;
+  --alert-ink: #8a2520;
+  --focus: #1d5a8c;
+
+  /* Colour: the camera window is dark in both themes */
+  --video-bed: #101412;
+  --on-video: #e9ece9;
+  --on-video-muted: #a6aea9;
+  --focus-on-video: #8fc1ec;
+
+  /* Type: Archivo for numbers and headings (its width axis gives a narrow numeral),
+     Atkinson Hyperlegible Next for running text. Both are vendored in app/fonts. */
+  --font-display: var(--font-archivo), 'Archivo', system-ui, sans-serif;
+  --font-text: var(--font-atkinson), 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  --font-sans: var(--font-text);
+
+  --text-xs: 0.8125rem; /* 13px, uppercase micro-labels only */
+  --text-sm: 0.875rem; /* 14px */
+  --text-md: 1rem; /* 16px, body */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.375rem; /* 22px, panel titles */
+  --text-2xl: 1.875rem; /* 30px */
+  --text-3xl: 2.75rem; /* 44px, the last verdict */
+  --text-counter: clamp(5rem, 8.5vw, 10rem); /* the bin counters, read from 2 m */
+  --leading-tight: 1.1;
+  --leading-body: 1.5;
+  --tracking-label: 0.06em;
+  --measure: 70ch;
+
+  /* Archivo's axes, set with font-stretch and font-weight where it is used. */
+  --display-wdth: 75%;
+  --counter-wdth: 62%;
+  --weight-regular: 400;
+  --weight-medium: 550;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+
+  /* Space: one 8px unit, with a half step. */
   --space-half: 4px;
   --space-1: 8px;
+  --space-1-5: 12px;
   --space-2: 16px;
   --space-3: 24px;
   --space-4: 32px;
+  --space-5: 40px;
   --space-6: 48px;
   --space-8: 64px;
   --gutter: 24px;
   --content-max: 1760px;
 
-  /* Radius by role, not one value for everything. */
-  --radius-camera: 6px;
-  --radius-bin: 0; /* they are bins */
-  --radius-lamp: 0; /* the link indicator is a square lamp, like the bins */
-  --radius-button: 4px;
+  /* Radius: small. Instruments have corners. */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
 
-  /* Focus: a 2px ink ring, offset in safety yellow. */
+  /* Elevation: borders do the work; shadows only lift dialogs. */
+  --border: 1px solid var(--line);
+  --border-strong: 1px solid var(--line-strong);
+  --elevation-dialog: 0 16px 48px rgb(16 20 18 / 0.28);
+  --backdrop: rgb(16 20 18 / 0.55);
+
+  /* Focus */
   --focus-ring-width: 2px;
-  --focus-ring-color: var(--ink);
-  --focus-ring-offset: var(--hivis);
+  --focus-ring-offset-width: 2px;
 
-  /* Type: Archivo, variable, with the width axis. The wdth and wght values are set with
-     font-variation-settings in the component that uses them. */
-  --font-sans: var(--font-archivo), 'Archivo', system-ui, sans-serif;
+  /* Motion: calm. One short highlight when a count changes, nothing that loops.
+     Every duration drops to 0 under prefers-reduced-motion (global.css). */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-highlight: 250ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
+  /* Legacy names, kept only until the components move to the names above (phase 2). */
+  --bin-blue: var(--recyclable);
+  --bin-charcoal: var(--trash);
+  --hivis: var(--on-fill);
+  --white: var(--on-fill);
+  --focus-ring-color: var(--focus);
+  --focus-ring-offset: transparent;
+  --radius-camera: var(--radius-md);
+  --radius-bin: 0;
+  --radius-lamp: 0;
+  --radius-button: var(--radius-sm);
   --type-counter-wdth: 62;
   --type-counter-wght: 800;
-  --type-counter-size: clamp(96px, 9vw, 176px);
+  --type-counter-size: var(--text-counter);
   --type-counter-leading: 0.9;
   --type-counter-tracking: -0.01em;
-
   --type-title-wdth: 100;
   --type-title-wght: 650;
-  --type-title-size: 22px;
-
+  --type-title-size: var(--text-xl);
   --type-body-wdth: 100;
   --type-body-wght: 400;
-  --type-body-size: 16px;
-  --type-body-leading: 1.5;
-  --measure: 70ch;
-
-  /* Motion: one orchestrated moment when an item arrives. */
+  --type-body-size: var(--text-md);
+  --type-body-leading: var(--leading-body);
   --motion-slide: 600ms;
-  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-ease: var(--ease-standard);
   --motion-swap: 150ms;
   --motion-row-fade: 1.2s;
   --motion-badge: 2.5s;
-  --row-highlight: 35%; /* --hivis mix at the start of the row fade */
+  --row-highlight: 0%;
+}
+
+/* Dark, picked by the system. Keep identical to the block below. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --ground: #0e1311;
+    --surface: #161c19;
+    --surface-sunk: #1f2723;
+    --ink: #e6ebe7;
+    --ink-muted: #a3ada7;
+    --line: #2c3631;
+    --line-strong: #7d8882;
+    --recyclable: #1f7048;
+    --recyclable-tint: #15291e;
+    --recyclable-ink: #8fd6ae;
+    --trash: #4f5a64;
+    --trash-tint: #20262b;
+    --trash-ink: #c0c9d1;
+    --unsure: #e0a019;
+    --unsure-tint: #2f2510;
+    --unsure-ink: #f0c463;
+    --on-fill: #ffffff;
+    --on-unsure: #1b211e;
+    --recyclable-mark: #5fbf8a;
+    --trash-mark: #9aa6b1;
+    --unsure-mark: #e0a019;
+    --signal: #7fb3e0;
+    --signal-tint: #142333;
+    --signal-ink: #a3cbef;
+    --alert: #e5736a;
+    --alert-tint: #34191a;
+    --alert-ink: #f3a49c;
+    --focus: #8fc1ec;
+    --video-bed: #070908;
+    --on-video: #e9ece9;
+    --on-video-muted: #a6aea9;
+    --focus-on-video: #8fc1ec;
+    --elevation-dialog: 0 16px 48px rgb(0 0 0 / 0.6);
+    --backdrop: rgb(0 0 0 / 0.65);
+  }
+}
+
+/* Dark, picked by the viewer with the theme switch. Keep identical to the block above. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --ground: #0e1311;
+  --surface: #161c19;
+  --surface-sunk: #1f2723;
+  --ink: #e6ebe7;
+  --ink-muted: #a3ada7;
+  --line: #2c3631;
+  --line-strong: #7d8882;
+  --recyclable: #1f7048;
+  --recyclable-tint: #15291e;
+  --recyclable-ink: #8fd6ae;
+  --trash: #4f5a64;
+  --trash-tint: #20262b;
+  --trash-ink: #c0c9d1;
+  --unsure: #e0a019;
+  --unsure-tint: #2f2510;
+  --unsure-ink: #f0c463;
+  --on-fill: #ffffff;
+  --on-unsure: #1b211e;
+  --recyclable-mark: #5fbf8a;
+  --trash-mark: #9aa6b1;
+  --unsure-mark: #e0a019;
+  --signal: #7fb3e0;
+  --signal-tint: #142333;
+  --signal-ink: #a3cbef;
+  --alert: #e5736a;
+  --alert-tint: #34191a;
+  --alert-ink: #f3a49c;
+  --focus: #8fc1ec;
+  --video-bed: #070908;
+  --on-video: #e9ece9;
+  --on-video-muted: #a6aea9;
+  --focus-on-video: #8fc1ec;
+  --elevation-dialog: 0 16px 48px rgb(0 0 0 / 0.6);
+  --backdrop: rgb(0 0 0 / 0.65);
 }
