@@ -35,7 +35,7 @@ sys.path.insert(0, str(HERE))  # numpy_cnn, presence
 sys.path.insert(0, str(HERE.parent / "backend"))  # the website's frame encoder and bin table
 
 from numpy_cnn import NumpyCNN  # noqa: E402
-from presence import UNCERTAIN, ItemCounter  # noqa: E402
+from presence import UNCERTAIN, FrameHealth, ItemCounter, Verdict  # noqa: E402
 
 from app.classes import expected_firmware_bin  # noqa: E402
 from app.frames import KIND_PREVIEW, KIND_VERDICT, encode_packet  # noqa: E402
@@ -208,6 +208,15 @@ class Bridge:
         self._dbg: list[str] = []
         self._counter = ItemCounter(net.classes, min_conf=args.min_conf, log=self._log)
         self.items = {"recyclable": 0, "trash": 0, UNCERTAIN: 0}
+        # A camera that is off, covered or stuck still sends frames, or the old one over and over.
+        # Those must not be counted, and must not look like a live camera to the website.
+        self._health = FrameHealth()
+        self._picture_note: str | None = None  # why the picture is unusable, None when it is fine
+        self._live_at = float("-inf")  # when the last usable frame arrived
+        self._last_preview = 0.0
+        self._last_status = 0.0
+        self._frames_since_status = 0
+        self._latencies: list[float] = []
 
     # -- plumbing --
 
@@ -263,63 +272,92 @@ class Bridge:
 
     # -- loops --
 
+    def picture_live(self, now: float) -> bool:
+        """A usable picture arrived recently: frames that are black, flat or frozen do not count."""
+        return now - self._live_at < CAMERA_FRESH_S
+
     async def heartbeats(self) -> None:
-        # The heartbeat is the proof the camera is alive: no frames, no heartbeat, and the
-        # console says the board is not responding instead of showing a stale "connected".
+        # The heartbeat is the proof the camera is alive: no usable picture, no heartbeat, and
+        # the console says the camera is not responding instead of showing a stale "connected".
         while True:
             await asyncio.sleep(HEARTBEAT_S)
-            if self._reader.age() < CAMERA_FRESH_S:
+            if self._reader.age() < CAMERA_FRESH_S and self.picture_live(time.monotonic()):
                 await self.send(f"HB,{self.uptime_ms()}\n".encode())
             elif self._writer is not None:
-                where = self._reader.device or "no board"
-                await self.send(f"DBG,no camera frames from {where}\n".encode()[:68])
+                if self._picture_note is not None and self._reader.age() < CAMERA_FRESH_S:
+                    text = f"camera picture is {self._picture_note}"
+                else:
+                    text = f"no camera frames from {self._reader.device or 'no board'}"
+                await self.send(f"DBG,{text[:60]}\n".encode())
+
+    async def step(self, raw: np.ndarray, arrived: float) -> Verdict | None:
+        """One camera frame, `arrived` being when it came in (the bridge's own monotonic clock).
+
+        A frame that is not a live picture is shown in the preview but never reaches the model or
+        the counter; the counter learns the empty view again once the picture is back.
+        """
+        frame = fit_to_model(raw)
+        health = self._health.feed(frame, arrived)
+        if health.restart:
+            self._counter.recalibrate()
+        if health.reason != self._picture_note:
+            self._picture_note = health.reason
+            if health.reason is None:
+                self._log("camera picture is back: learning the empty view")
+            else:
+                self._log(f"camera picture is {health.reason}: not counting")
+
+        verdict: Verdict | None = None
+        probs = None
+        if health.ok:
+            self._live_at = arrived
+            started = time.perf_counter()
+            probs = await asyncio.to_thread(self._net.predict, frame)
+            self._latencies = [*self._latencies, (time.perf_counter() - started) * 1000][-16:]
+            self._frames_since_status += 1
+            verdict = self._counter.feed(frame, probs, arrived)
+
+        if verdict is not None:
+            label = WEBSITE_LABEL[verdict.label]
+            self.items[label] += 1
+            tag = "sent" if self._writer is not None else "DROPPED (website not connected)"
+            say(f"item #{sum(self.items.values())}: {label} {verdict.confidence:.2f} -> {tag}")
+            latency = round(float(np.mean(self._latencies)))
+            packet = encode_packet(KIND_VERDICT, frame.shape[1], frame.shape[0], frame.tobytes())
+            await self.send(packet + event_line(label, verdict.confidence, latency))
+        elif self._preview and arrived - self._last_preview >= PREVIEW_INTERVAL_S:
+            self._last_preview = arrived
+            await self.send(
+                encode_packet(KIND_PREVIEW, frame.shape[1], frame.shape[0], frame.tobytes())
+            )
+        await self._flush_debug()
+
+        if self._verbose and probs is not None and arrived - self._last_status >= 2.0:
+            fps = (
+                self._frames_since_status / max(arrived - self._last_status, 1e-6)
+                if self._last_status
+                else 0.0
+            )
+            self._last_status = arrived
+            self._frames_since_status = 0
+            top = int(probs.argmax())
+            say(
+                f"{self._counter.state:11s} change {self._counter.change:5.1f} "
+                f"(on>{self._counter.t_on:.1f} off<{self._counter.t_off:.1f})  "
+                f"model {self._net.classes[top]} {probs[top]:.2f}  "
+                f"{fps:.1f} fps  {np.mean(self._latencies):.0f} ms"
+            )
+        return verdict
 
     async def pipeline(self) -> None:
-        last_seq, last_preview, last_status = 0, 0.0, 0.0
-        latencies: list[float] = []
-        frames_since_status = 0
+        last_seq = 0
         while True:
             snap = self._reader.snapshot()
             if snap is None or snap[0] == last_seq:
                 await asyncio.sleep(0.01)
                 continue
-            last_seq, _, raw = snap
-            frame = fit_to_model(raw)
-
-            started = time.perf_counter()
-            probs = await asyncio.to_thread(self._net.predict, frame)
-            latencies = [*latencies, (time.perf_counter() - started) * 1000][-16:]
-            frames_since_status += 1
-
-            now = time.monotonic()
-            verdict = self._counter.feed(frame, probs, now)
-            if verdict is not None:
-                label = WEBSITE_LABEL[verdict.label]
-                self.items[label] += 1
-                tag = "sent" if self._writer is not None else "DROPPED (website not connected)"
-                say(f"item #{sum(self.items.values())}: {label} {verdict.confidence:.2f} -> {tag}")
-                latency = round(float(np.mean(latencies)))
-                packet = encode_packet(
-                    KIND_VERDICT, frame.shape[1], frame.shape[0], frame.tobytes()
-                )
-                await self.send(packet + event_line(label, verdict.confidence, latency))
-            elif self._preview and now - last_preview >= PREVIEW_INTERVAL_S:
-                last_preview = now
-                await self.send(
-                    encode_packet(KIND_PREVIEW, frame.shape[1], frame.shape[0], frame.tobytes())
-                )
-            await self._flush_debug()
-
-            if self._verbose and now - last_status >= 2.0:
-                fps = frames_since_status / max(now - last_status, 1e-6) if last_status else 0.0
-                last_status, frames_since_status = now, 0
-                top = int(probs.argmax())
-                say(
-                    f"{self._counter.state:11s} change {self._counter.change:5.1f} "
-                    f"(on>{self._counter.t_on:.1f} off<{self._counter.t_off:.1f})  "
-                    f"model {self._net.classes[top]} {probs[top]:.2f}  "
-                    f"{fps:.1f} fps  {np.mean(latencies):.0f} ms"
-                )
+            last_seq, arrived, raw = snap
+            await self.step(raw, arrived)
 
 
 async def serve(bridge: Bridge, port: int) -> None:

@@ -24,12 +24,29 @@ import numpy as np
 UNCERTAIN = "uncertain"
 CALIBRATING, ABSENT, PRESENT = "calibrating", "absent", "present"
 
+# A live picture from this rig is never close to these. Every one of the 269 training frames has
+# a mean brightness of at least 59 and a contrast (standard deviation) of at least 30; the
+# limits sit far below that, so only a camera that is off, covered or stuck can reach them.
+DARK_MEAN = 20.0  # grey levels: below this the picture is black
+FLAT_STD = 4.0  # grey levels: below this the picture has no detail, only noise
+FROZEN_FRAMES = 10  # a live sensor never repeats a frame bit for bit; this many in a row is stuck
+RESUME_GAP_S = 3.0  # no frames for this long: the camera was off, the old background is stale
+DARK_OR_FLAT = "dark or flat"
+FROZEN = "frozen"
+
 
 @dataclass(frozen=True, slots=True)
 class Verdict:
     label: str  # a model class name, or "uncertain"
     confidence: float  # 0..1, of the averaged answer
     frames: int  # frames the answer is based on
+
+
+@dataclass(frozen=True, slots=True)
+class Health:
+    ok: bool  # the frame is a live picture and may be counted
+    reason: str | None  # why not: DARK_OR_FLAT or FROZEN
+    restart: bool  # the camera has just come back: learn the empty view again
 
 
 def shrink(frame: np.ndarray, k: int = 4) -> np.ndarray:
@@ -44,6 +61,55 @@ def scene_change(small: np.ndarray, background: np.ndarray) -> float:
     """Mean absolute difference in grey levels (0..255) after removing each picture's own
     average brightness, so the camera's auto-exposure moving does not look like an item."""
     return float(np.abs((small - small.mean()) - (background - background.mean())).mean())
+
+
+class FrameHealth:
+    """Is the camera showing a live picture?
+
+    The model has no "empty" or "no camera" class and the counter ignores overall brightness,
+    so a camera that goes black or flat looks to it like "the view changed" and the model then
+    answers confidently about nothing. Frames that fail this check must not reach the model or
+    the counter. When the camera comes back (or after a gap in the stream) `restart` says the
+    old background no longer holds and the view must be learned again.
+    """
+
+    def __init__(
+        self,
+        *,
+        dark_mean: float = DARK_MEAN,
+        flat_std: float = FLAT_STD,
+        frozen_frames: int = FROZEN_FRAMES,
+        gap_s: float = RESUME_GAP_S,
+    ) -> None:
+        self.dark_mean = dark_mean
+        self.flat_std = flat_std
+        self.frozen_frames = frozen_frames
+        self.gap_s = gap_s
+        self._prev: np.ndarray | None = None
+        self._same = 0
+        self._last_at: float | None = None
+        self._ok = True
+
+    def feed(self, frame: np.ndarray, now: float) -> Health:
+        gap = self._last_at is not None and now - self._last_at >= self.gap_s
+        self._last_at = now
+        same = (
+            self._prev is not None
+            and self._prev.shape == frame.shape
+            and bool(np.array_equal(self._prev, frame))
+        )
+        self._same = self._same + 1 if same else 0
+        self._prev = frame
+
+        reason: str | None = None
+        if float(frame.mean()) < self.dark_mean or float(frame.std()) < self.flat_std:
+            reason = DARK_OR_FLAT
+        elif self._same >= self.frozen_frames:
+            reason = FROZEN
+        ok = reason is None
+        restart = gap or (ok and not self._ok)
+        self._ok = ok
+        return Health(ok, reason, restart)
 
 
 class ItemCounter:

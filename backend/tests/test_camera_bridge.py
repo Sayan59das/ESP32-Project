@@ -5,6 +5,7 @@ the path. They need numpy; the model-dependent ones also need Model/waste_cnn.pt
 dataset it was trained on, and skip without them.
 """
 
+import asyncio
 import pickle
 import sys
 import zipfile
@@ -180,6 +181,200 @@ def test_thresholds_follow_the_cameras_own_noise() -> None:
     assert loud.counter.t_on > quiet.counter.t_on
 
 
+# -- a camera that is off, covered or stuck ----------------------------------------------
+
+
+class StubNet:
+    """Always answers 'recyclable', like a model that cannot tell the camera is off."""
+
+    classes = ("recyclable", "non_recyclable")
+
+    def predict(self, frame: "np.ndarray") -> "np.ndarray":
+        return REC
+
+
+class Args:
+    verbose = False
+    min_conf = 0.60
+
+
+def rig_scene(seed: int = 0) -> "np.ndarray":
+    """An empty view like the real rig's: a strong light-to-dark gradient plus texture (a
+    contrast of about 30 grey levels, like the median of the training frames). A flat scene
+    would hide the bug, because a black frame only looks like a change against structure."""
+    return scene(seed) + np.linspace(-40.0, 40.0, W, dtype=np.float32)
+
+
+class Feed:
+    """Frames into Bridge.step on a virtual clock: what the camera bridge does per frame."""
+
+    def __init__(self, net=None) -> None:
+        reader = camera_bridge.FrameReader("unused", 921600)
+        self.bridge = camera_bridge.Bridge(net or StubNet(), reader, Args())
+        self.rng = np.random.default_rng(1)
+        self.base = rig_scene()
+        self.t = 100.0
+        self.verdicts: list[presence.Verdict] = []
+
+    async def play(self, seconds: float, make=None) -> None:
+        for _ in range(round(seconds * FPS)):
+            frame = make() if make else noisy(self.base, self.rng)
+            verdict = await self.bridge.step(frame, self.t)
+            if verdict is not None:
+                self.verdicts.append(verdict)
+            self.t += STEP
+
+    def item(self):
+        return lambda: noisy(with_item(self.base), self.rng)
+
+
+def black() -> "np.ndarray":
+    return np.zeros((H, W), dtype=np.uint8)
+
+
+# Each is a camera that is not showing a picture, and what the bridge should call it.
+DEAD_PICTURES = {
+    "black": (lambda rng: black(), presence.DARK_OR_FLAT),
+    "black with sensor noise": (
+        lambda rng: noisy(np.zeros((H, W), dtype=np.float32), rng, sigma=1.0),
+        presence.DARK_OR_FLAT,
+    ),
+    "flat grey": (lambda rng: np.full((H, W), 128, dtype=np.uint8), presence.DARK_OR_FLAT),
+    "flat grey with sensor noise": (
+        lambda rng: noisy(np.full((H, W), 128.0, dtype=np.float32), rng, sigma=2.0),
+        presence.DARK_OR_FLAT,
+    ),
+    "lens covered": (
+        lambda rng: noisy(np.full((H, W), 6.0, dtype=np.float32), rng, sigma=2.0),
+        presence.DARK_OR_FLAT,
+    ),
+    "lights off": (lambda rng: noisy(rig_scene(), rng, gain=0.15), presence.DARK_OR_FLAT),
+}
+
+
+@pytest.mark.parametrize("name", list(DEAD_PICTURES))
+def test_a_camera_that_is_off_is_not_an_item_and_is_not_alive(name: str) -> None:
+    make, reason = DEAD_PICTURES[name]
+
+    async def run() -> Feed:
+        feed = Feed()
+        await feed.play(4)
+        await feed.play(6, lambda: make(feed.rng))
+        return feed
+
+    feed = asyncio.run(run())
+    assert feed.verdicts == []
+    assert feed.bridge._picture_note == reason
+    # No usable picture means no heartbeat, so the console says the camera is not responding.
+    assert not feed.bridge.picture_live(feed.t)
+
+
+def test_a_camera_that_repeats_one_frame_is_not_alive_and_is_not_counted() -> None:
+    async def run() -> Feed:
+        feed = Feed()
+        await feed.play(4)
+        stuck = noisy(feed.base, feed.rng)
+        await feed.play(4, lambda: stuck.copy())
+        return feed
+
+    feed = asyncio.run(run())
+    assert feed.verdicts == []
+    assert feed.bridge._picture_note == presence.FROZEN
+    assert not feed.bridge.picture_live(feed.t)
+
+
+def test_a_live_picture_keeps_the_heartbeat_going() -> None:
+    async def run() -> Feed:
+        feed = Feed()
+        await feed.play(6)
+        return feed
+
+    feed = asyncio.run(run())
+    assert feed.bridge._picture_note is None
+    assert feed.bridge.picture_live(feed.t)
+
+
+def test_when_the_camera_comes_back_it_learns_the_view_again_then_counts_normally() -> None:
+    async def run() -> Feed:
+        feed = Feed()
+        await feed.play(4)
+        await feed.play(4, black)  # switched off
+        await feed.play(4)  # switched on again, view empty
+        assert feed.bridge.picture_live(feed.t)
+        await feed.play(3, feed.item())
+        await feed.play(3)
+        return feed
+
+    feed = asyncio.run(run())
+    assert [v.label for v in feed.verdicts] == ["recyclable"]
+
+
+def test_a_gap_in_the_stream_means_the_old_background_is_stale() -> None:
+    async def run() -> Feed:
+        feed = Feed()
+        await feed.play(4)
+        feed.t += 20.0  # the board was unplugged: no frames at all
+        feed.base = rig_scene(seed=5)[:, ::-1].copy()  # and the view is different when it is back
+        await feed.play(5)
+        return feed
+
+    feed = asyncio.run(run())
+    assert feed.verdicts == []
+    assert feed.bridge._counter.state == presence.ABSENT
+
+
+def test_frame_health_accepts_dim_live_pictures() -> None:
+    health = presence.FrameHealth()
+    rng = np.random.default_rng(2)
+    for step, gain in enumerate((1.0, 0.6, 0.4, 0.3)):
+        result = health.feed(noisy(scene(), rng, gain=gain), step * STEP)
+        assert result.ok
+        assert result.reason is None
+
+
+def test_frame_health_reports_dead_pictures_and_asks_for_one_restart_when_they_end() -> None:
+    health = presence.FrameHealth()
+    rng = np.random.default_rng(3)
+    t = 0.0
+
+    def feed(frame: "np.ndarray") -> presence.Health:
+        nonlocal t
+        t += STEP
+        return health.feed(frame, t)
+
+    first = feed(noisy(scene(), rng))
+    assert first.ok
+    assert not first.restart  # the counter is already calibrating at start
+    for _ in range(5):
+        dead = feed(black())
+        assert not dead.ok
+        assert dead.reason == presence.DARK_OR_FLAT
+        assert not dead.restart
+    back = feed(noisy(scene(), rng))
+    assert back.ok
+    assert back.restart
+    assert not feed(noisy(scene(), rng)).restart
+
+
+def test_frame_health_calls_ten_identical_frames_frozen() -> None:
+    health = presence.FrameHealth()
+    frame = noisy(scene(), np.random.default_rng(4))
+    results = [health.feed(frame.copy(), i * STEP) for i in range(12)]
+    assert all(r.ok for r in results[:10])  # the first, and nine repeats
+    assert [r.reason for r in results[10:]] == [presence.FROZEN, presence.FROZEN]
+    moving = health.feed(noisy(scene(), np.random.default_rng(5)), 12 * STEP)
+    assert moving.ok
+    assert moving.restart
+
+
+def test_frame_health_restarts_after_a_gap_in_the_stream() -> None:
+    health = presence.FrameHealth()
+    rng = np.random.default_rng(6)
+    assert not health.feed(noisy(scene(), rng), 0.0).restart
+    assert not health.feed(noisy(scene(), rng), 1.0).restart  # a slow second is not a gap
+    assert health.feed(noisy(scene(), rng), 10.0).restart
+
+
 # -- reading the camera stream -----------------------------------------------------------
 
 
@@ -320,8 +515,6 @@ def test_the_numpy_model_classifies_the_training_images_like_the_trained_net() -
 @needs_model
 def test_the_camera_bridge_end_to_end_counts_one_item_per_presentation() -> None:
     """Real model, real gate, real contract encoding: empty view, an item, empty, an item."""
-    import asyncio
-
     from PIL import Image
 
     from app.classes import stored_bin
@@ -393,3 +586,30 @@ def test_the_camera_bridge_end_to_end_counts_one_item_per_presentation() -> None
         ("trash", "trash"),
     ]
     assert sum(isinstance(i, FramePacket) for i in items) == 2  # one verdict frame each
+
+
+@needs_model
+def test_with_the_real_model_a_camera_going_dark_is_not_counted_but_the_next_item_is() -> None:
+    from PIL import Image
+
+    net = numpy_cnn.NumpyCNN.from_checkpoint(MODEL_DIR / "waste_cnn.pt")
+
+    def first(name: str) -> "np.ndarray":
+        f = sorted((MODEL_DIR / "dataset" / name).glob("*.png"))[0]
+        return np.asarray(Image.open(f).convert("L"))
+
+    pictures = {name: first(name) for name in net.classes}
+
+    async def run() -> Feed:
+        feed = Feed(net)
+        feed.base = np.median(np.stack(list(pictures.values())), axis=0).astype(np.float32)
+        item = pictures["recyclable"].astype(np.float32)
+        await feed.play(3)
+        await feed.play(4, black)  # the camera is switched off: the model would still answer
+        await feed.play(3)  # and on again, with an empty view
+        await feed.play(2, lambda: noisy(item, feed.rng, sigma=2.0))
+        await feed.play(2)
+        return feed
+
+    feed = asyncio.run(run())
+    assert [v.label for v in feed.verdicts] == ["recyclable"]
