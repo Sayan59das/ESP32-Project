@@ -5,9 +5,11 @@
 
 .head,
 .headNumber {
-  padding: var(--space-half) 0;
+  padding: 0 0 var(--space-1);
+  border-bottom: var(--border);
   color: var(--ink-muted);
-  font-weight: var(--type-body-wght);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
   text-align: left;
 }
 
@@ -16,30 +18,80 @@
   text-align: right;
 }
 
-.group {
-  padding: var(--space-2) 0 var(--space-half);
-  font-weight: var(--type-title-wght);
-  text-align: left;
+.row + .row th,
+.row + .row td {
+  border-top: var(--border);
 }
 
-.row {
-  border-top: 1px solid var(--ground);
-}
-
+/* The item cell is the widest column, so the bar sits under the item's name. */
 .item {
+  width: 100%;
   padding: var(--space-1) 0;
-  font-weight: var(--type-body-wght);
+  font-weight: var(--weight-medium);
   text-align: left;
   white-space: nowrap;
 }
 
 .itemInner {
-  display: flex;
+  display: inline-flex;
   gap: var(--space-1);
   align-items: center;
+}
+
+.mark-recyclable svg {
+  color: var(--recyclable-mark);
+}
+
+.mark-trash svg {
+  color: var(--trash-mark);
+}
+
+.mark-unsure svg {
+  color: var(--unsure-mark);
+}
+
+.track {
+  position: relative;
+  display: block;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+  overflow: hidden;
+}
+
+.track::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--share);
+  background: var(--fill);
+}
+
+.bar-recyclable {
+  --fill: var(--recyclable-mark);
+}
+
+.bar-trash {
+  --fill: var(--trash-mark);
+}
+
+/* Unsure bars are hatched as well as amber, so they read apart from the bins at a glance. */
+.bar-unsure {
+  --fill: repeating-linear-gradient(
+    -45deg,
+    var(--unsure-mark) 0 4px,
+    color-mix(in srgb, var(--unsure-mark) 55%, var(--surface)) 4px 7px
+  );
 }
 
 .number {
   padding: var(--space-1) 0 var(--space-1) var(--space-2);
   text-align: right;
+  white-space: nowrap;
+}
+
+.loading {
+  display: grid;
+  gap: var(--space-1-5);
 }

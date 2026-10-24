@@ -3,12 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { API_BASE, urls } from '@/lib/api';
+import { cameraState, isFault, type CameraState } from '@/lib/cameraState';
 import { copy } from '@/lib/copy';
-import { binWord, itemName, percent } from '@/lib/format';
-import { portBusy } from '@/lib/reducer';
+import { itemName, percent } from '@/lib/format';
+import { portBusy, type LinkLabel } from '@/lib/reducer';
 import type { Event, ItemCount, Link, SourceName } from '@/lib/types';
 
 import styles from './CameraWindow.module.css';
+import { OUTCOMES } from './outcome';
+import { Badge } from './ui/Badge';
+import { Icon, type IconName } from './ui/Icon';
 
 type ImageSource = 'classifier' | 'webcam';
 type WebcamStatus = 'asking' | 'denied' | 'none' | 'busy' | 'insecure' | 'live';
@@ -116,7 +120,7 @@ function Webcam({ onStatus }: { onStatus: (status: WebcamStatus) => void }) {
 
   return (
     <>
-      <video ref={video} className={styles.feed} autoPlay muted playsInline />
+      <video ref={video} className={styles.webcamFeed} autoPlay muted playsInline />
       {devices.length > 1 ? (
         <label className={styles.devicePicker}>
           <span className="visually-hidden">Camera</span>
@@ -140,8 +144,37 @@ function Webcam({ onStatus }: { onStatus: (status: WebcamStatus) => void }) {
   );
 }
 
+const CHIP_ICONS: Record<CameraState, IconName> = {
+  ready: 'ready',
+  counted: 'counted',
+  unsure: 'unsure',
+  waiting: 'waiting',
+  'no-frames': 'alert',
+  connecting: 'waiting',
+  reconnecting: 'waiting',
+  'not-linked': 'alert',
+  'not-responding': 'alert',
+  unreachable: 'alert',
+};
+
+/** The message and next step for a camera state that stops the counting loop. */
+function faultMessage(state: CameraState, link: Link | null): string {
+  switch (state) {
+    case 'unreachable':
+      return copy.backendUnreachable(API_BASE);
+    case 'not-linked':
+      return link !== null && portBusy(link) ? copy.portBusy : copy.nanoNotLinked;
+    case 'not-responding':
+      return copy.cameraNotResponding;
+    default:
+      return copy.classifierNoFrames;
+  }
+}
+
 interface Props {
   link: Link | null;
+  linkLabel: LinkLabel;
+  paused: boolean;
   runSource: SourceName | null;
   backendUnreachable: boolean;
   latest: { event: Event; at: number } | null;
@@ -153,6 +186,8 @@ interface Props {
 
 export function CameraWindow({
   link,
+  linkLabel,
+  paused,
   runSource,
   backendUnreachable,
   latest,
@@ -191,40 +226,37 @@ export function CameraWindow({
     writeStored(SOURCE_KEY, next);
   };
 
-  let message: string | null = null;
-  if (source === 'webcam') {
-    message = webcamStatus === 'live' ? null : webcamMessages[webcamStatus];
-  } else if (backendUnreachable) {
-    message = copy.backendUnreachable(API_BASE);
-  } else if (link === null) {
-    message = copy.classifierWaiting;
-  } else if (!link.source_open) {
-    message = portBusy(link) ? copy.portBusy : copy.nanoNotLinked;
-  } else if (feedFailed || !((link.preview_fps ?? 0) > 0)) {
-    message =
-      now - viewSince < NO_FRAMES_AFTER_MS ? copy.classifierWaiting : copy.classifierNoFrames;
-  }
+  const state = cameraState({
+    backendUnreachable,
+    paused,
+    link,
+    linkLabel,
+    verdict,
+    framesFlowing: !feedFailed && (link?.preview_fps ?? 0) > 0,
+    framesOverdue: now - viewSince >= NO_FRAMES_AFTER_MS,
+  });
+
+  const classifier = source === 'classifier';
+  const fault = classifier && isFault(state) ? faultMessage(state, link) : null;
+  const webcamMessage =
+    !classifier && webcamStatus !== 'live' ? webcamMessages[webcamStatus] : null;
+  const waitingMessage =
+    classifier && (state === 'waiting' || state === 'connecting') ? copy.classifierWaiting : null;
 
   const simulatedTag =
     runSource === 'sim' ? copy.simulatedBanner : runSource === 'replay' ? copy.replayBanner : null;
+  const outcome = verdict ? OUTCOMES[verdict.bin] : null;
   const verdictName = verdict ? itemName(verdict, items) : '';
-  const verdictText = verdict
-    ? verdict.bin === 'unsure'
-      ? `Unsure, not counted, ${percent(verdict.confidence)}`
-      : `${verdictName}, ${binWord(verdict.bin).toLowerCase()}, ${percent(verdict.confidence)}`
-    : '';
-  const stripClass =
-    verdict?.bin === 'recyclable'
-      ? styles.stripRecyclable
-      : verdict?.bin === 'trash'
-        ? styles.stripTrash
-        : styles.stripUnsure;
 
   return (
-    <section className={`${styles.window} ${className ?? ''}`} aria-labelledby="camera-title">
+    <section
+      className={[styles.window, className].filter(Boolean).join(' ')}
+      aria-labelledby="camera-title"
+    >
       <div className={styles.header}>
         <h2 id="camera-title" className={styles.title}>
-          {source === 'classifier' ? copy.classifierTitle : copy.webcamTitle}
+          <Icon name="camera" size={20} />
+          {classifier ? copy.classifierTitle : copy.webcamTitle}
         </h2>
         <fieldset className={styles.toggle}>
           <legend className="visually-hidden">Image source</legend>
@@ -244,12 +276,10 @@ export function CameraWindow({
             </label>
           ))}
         </fieldset>
-        <p className={styles.note}>
-          {source === 'classifier' ? copy.classifierNote : copy.webcamNote}
-        </p>
+        <p className={styles.note}>{classifier ? copy.classifierNote : copy.webcamNote}</p>
       </div>
       <div className={styles.viewport} data-testid="camera-viewport">
-        {source === 'classifier' && pageLoaded && !backendUnreachable ? (
+        {classifier && pageLoaded && !backendUnreachable ? (
           // eslint-disable-next-line @next/next/no-img-element -- a live MJPEG stream
           <img
             key={connection}
@@ -259,8 +289,8 @@ export function CameraWindow({
             onError={() => setFeedFailed(true)}
           />
         ) : null}
-        {source === 'webcam' ? <Webcam onStatus={setWebcamStatus} /> : null}
-        {verdict !== null && source === 'classifier' && verdict.has_frame ? (
+        {!classifier ? <Webcam onStatus={setWebcamStatus} /> : null}
+        {verdict !== null && classifier && verdict.has_frame ? (
           // eslint-disable-next-line @next/next/no-img-element -- a stored PNG, drawn pixelated
           <img
             className={styles.feed}
@@ -268,11 +298,48 @@ export function CameraWindow({
             alt={`The frame the model classified as ${verdictName.toLowerCase()}`}
           />
         ) : null}
-        {message !== null ? <p className={styles.message}>{message}</p> : null}
-        {simulatedTag !== null ? <p className={styles.tag}>{simulatedTag}</p> : null}
-        {verdict !== null ? (
-          <p className={`${styles.strip} ${stripClass}`} aria-hidden="true">
-            {verdictText}
+
+        {/* Viewfinder marks: this is an instrument's view, not a video player. */}
+        <span className={styles.corners} aria-hidden="true" />
+
+        {fault !== null || webcamMessage !== null || waitingMessage !== null ? (
+          <div
+            className={fault !== null ? `${styles.message} ${styles.messageFault}` : styles.message}
+          >
+            <Icon name={fault !== null ? 'alert' : 'waiting'} size={28} />
+            <p className={styles.messageTitle}>
+              {classifier ? copy.chip[state] : copy.webcamTitle}
+            </p>
+            <p className={styles.messageBody}>{fault ?? webcamMessage ?? waitingMessage}</p>
+          </div>
+        ) : null}
+
+        <div className={styles.overlayTop}>
+          {simulatedTag !== null ? (
+            <Badge tone="inverse" icon={runSource === 'replay' ? 'replay' : 'simulated'}>
+              {simulatedTag}
+            </Badge>
+          ) : null}
+          <p className={`${styles.chip} ${styles[`chip-${classifier ? state : 'webcam'}`] ?? ''}`}>
+            <Icon name={classifier ? CHIP_ICONS[state] : 'camera'} size={16} />
+            <span>{classifier ? copy.chip[state] : copy.chip.webcam}</span>
+          </p>
+        </div>
+
+        {verdict !== null && outcome !== null ? (
+          <p
+            className={`${styles.strip} ${styles[`strip-${verdict.bin}`] ?? ''}`}
+            aria-hidden="true"
+          >
+            <Icon name={outcome.icon} size={24} />
+            <span className={styles.stripWord}>{outcome.word}</span>
+            <span className={styles.stripMeta}>
+              {verdict.bin === 'unsure'
+                ? `not counted, ${percent(verdict.confidence)}`
+                : verdictName === outcome.word
+                  ? percent(verdict.confidence)
+                  : `${verdictName}, ${percent(verdict.confidence)}`}
+            </span>
           </p>
         ) : null}
       </div>

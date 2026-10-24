@@ -66,7 +66,8 @@ PAIRINGS: tuple[Pairing, ...] = (
     Pairing("alert-ink", "surface", TEXT, "fault text in panels"),
     # The camera window, dark in both themes
     Pairing("on-video", "video-bed", TEXT, "camera window title, state chip, messages"),
-    Pairing("on-video-muted", "video-bed", TEXT, "camera window note"),
+    Pairing("on-video-muted", "video-bed", TEXT, "camera window note, toggle border"),
+    Pairing("video-bed", "on-video", TEXT, "the chosen image source"),
     # Graphics: bars, icons, lamps, borders, focus
     Pairing("recyclable-mark", "surface", GRAPHIC, "recyclable bars, icons and confidence bar"),
     Pairing("trash-mark", "surface", GRAPHIC, "trash bars, icons and confidence bar"),
@@ -78,6 +79,7 @@ PAIRINGS: tuple[Pairing, ...] = (
     Pairing("focus", "ground", GRAPHIC, "focus ring against the page"),
     Pairing("focus", "surface", GRAPHIC, "focus ring against panels"),
     Pairing("focus-on-video", "video-bed", GRAPHIC, "focus ring inside the camera window"),
+    Pairing("alert-on-video", "video-bed", GRAPHIC, "fault icon inside the camera window"),
 )
 
 

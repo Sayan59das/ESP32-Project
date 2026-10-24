@@ -54,6 +54,7 @@
   --on-video: #e9ece9;
   --on-video-muted: #a6aea9;
   --focus-on-video: #8fc1ec;
+  --alert-on-video: #f3a49c; /* fault icons inside the camera window */
 
   /* Type: Archivo for numbers and headings (its width axis gives a narrow numeral),
      Atkinson Hyperlegible Next for running text. Both are vendored in app/fonts. */
@@ -68,7 +69,7 @@
   --text-xl: 1.375rem; /* 22px, panel titles */
   --text-2xl: 1.875rem; /* 30px */
   --text-3xl: 2.75rem; /* 44px, the last verdict */
-  --text-counter: clamp(5rem, 8.5vw, 10rem); /* the bin counters, read from 2 m */
+  --text-counter: 10rem; /* cap for the bin counters; the readout fits them to their tile */
   --leading-tight: 1.1;
   --leading-body: 1.5;
   --tracking-label: 0.06em;
@@ -184,6 +185,7 @@
     --on-video: #e9ece9;
     --on-video-muted: #a6aea9;
     --focus-on-video: #8fc1ec;
+    --alert-on-video: #f3a49c;
     --elevation-dialog: 0 16px 48px rgb(0 0 0 / 0.6);
     --backdrop: rgb(0 0 0 / 0.65);
   }
@@ -224,6 +226,7 @@
   --on-video: #e9ece9;
   --on-video-muted: #a6aea9;
   --focus-on-video: #8fc1ec;
+  --alert-on-video: #f3a49c;
   --elevation-dialog: 0 16px 48px rgb(0 0 0 / 0.6);
   --backdrop: rgb(0 0 0 / 0.65);
 }

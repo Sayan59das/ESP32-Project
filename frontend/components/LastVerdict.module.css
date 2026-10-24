@@ -1,35 +1,148 @@
 .verdict {
-  display: flex;
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
   gap: var(--space-3);
-  align-items: flex-start;
+  align-items: start;
+}
+
+.frame,
+.slot {
+  display: block;
+  width: 128px;
+  height: 128px;
+  border-radius: var(--radius-sm);
+  background: var(--video-bed);
+  object-fit: contain;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
 }
 
 .slot {
-  width: 96px;
-  height: 96px;
+  background: var(--surface-sunk);
 }
 
 .details {
   display: grid;
   gap: var(--space-1);
-  justify-items: start;
+  min-width: 0;
 }
 
-.name {
-  display: flex;
-  gap: var(--space-1);
+/* The verdict word is the second-largest text on the page, after the counters. */
+.word {
+  display: inline-flex;
+  gap: var(--space-1-5);
   align-items: center;
-  font-size: var(--type-title-size);
-  font-weight: var(--type-title-wght);
-  font-stretch: calc(var(--type-title-wdth) * 1%);
-  line-height: 1.25;
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-stretch: var(--display-wdth);
+  font-weight: var(--weight-heavy);
+  line-height: 1;
 }
 
-.band {
-  padding: var(--space-half) var(--space-1);
-  font-weight: var(--type-title-wght);
+.word-recyclable svg {
+  color: var(--recyclable-mark);
+}
+
+.word-trash svg {
+  color: var(--trash-mark);
+}
+
+.word-unsure svg {
+  color: var(--unsure-mark);
 }
 
 .meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-1-5);
+  align-items: center;
+}
+
+.item {
+  font-weight: var(--weight-bold);
+}
+
+.time {
+  color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
+}
+
+.unsureNote {
+  max-width: var(--measure);
+  color: var(--ink-muted);
+}
+
+.confidence {
+  display: grid;
+  gap: var(--space-half);
+  max-width: 420px;
+}
+
+.confidenceLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+}
+
+/* A bar for the eye, the number for the record. The track's border keeps it visible when
+   the confidence is low. */
+.track {
+  position: relative;
+  display: block;
+  height: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+  overflow: hidden;
+}
+
+.track::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--confidence);
+  background: var(--fill, var(--ink));
+}
+
+.track-recyclable {
+  --fill: var(--recyclable-mark);
+}
+
+.track-trash {
+  --fill: var(--trash-mark);
+}
+
+.track-unsure {
+  --fill: var(--unsure-mark);
+}
+
+.latency {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.latency strong {
+  color: var(--ink);
+}
+
+.empty {
+  max-width: var(--measure);
+  color: var(--ink-muted);
+}
+
+@media (max-width: 640px) {
+  .verdict {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+
+  .frame,
+  .slot {
+    width: 96px;
+    height: 96px;
+  }
+
+  .word {
+    font-size: var(--text-2xl);
+  }
 }

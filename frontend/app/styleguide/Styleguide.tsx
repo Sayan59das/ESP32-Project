@@ -58,7 +58,7 @@ export function Styleguide() {
   const keep = useRef<HTMLButtonElement>(null);
   return (
     <div className={styles.page}>
-      <SiteHeader current="console" banner={null} />
+      <SiteHeader current="console" source="sim" />
       <main className={styles.main}>
         <h1 className={styles.h1}>Tokens and primitives</h1>
 

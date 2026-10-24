@@ -2,9 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 
-import { API_BASE } from '@/lib/api';
 import { copy } from '@/lib/copy';
-import { binWord, itemName, percent, shortTime } from '@/lib/format';
+import { binWord, itemName, percent } from '@/lib/format';
+import { linkView } from '@/lib/linkView';
 import { heartbeatAge, isPaused, lastLineAge, linkLabel } from '@/lib/reducer';
 import type { ItemCount } from '@/lib/types';
 import { useAnnouncer, useConsole } from '@/lib/useConsole';
@@ -15,7 +15,7 @@ import styles from './Console.module.css';
 import { EventLog } from './EventLog';
 import { ItemBreakdown } from './ItemBreakdown';
 import { LastVerdict } from './LastVerdict';
-import { LinkStatus } from './LinkStatus';
+import { LinkBadge, LinkPanel } from './LinkStatus';
 import { RunControls } from './RunControls';
 import { SiteHeader } from './SiteHeader';
 
@@ -26,6 +26,8 @@ export function Console() {
   const items: ItemCount[] = server?.by_item ?? [];
   const paused = isPaused(state, now);
   const runSource = server?.run.source ?? null;
+  const link = linkView(state, now);
+  const loading = server === null;
 
   // Announce each new item, throttled by the announcer. Names come from the latest table.
   const itemsRef = useRef(items);
@@ -41,40 +43,42 @@ export function Console() {
     );
   }, [latestEvent, announce]);
 
-  const banner =
-    runSource === 'sim' ? copy.simulatedBanner : runSource === 'replay' ? copy.replayBanner : null;
+  // A fault in the link is announced once when it starts, not on every tick.
+  const lastKind = useRef(link.kind);
+  useEffect(() => {
+    if (link.kind === lastKind.current) return;
+    lastKind.current = link.kind;
+    if (link.kind !== 'linked' && link.kind !== 'connecting')
+      announce(`${link.label}. ${link.sentence}`);
+  }, [link.kind, link.label, link.sentence, announce]);
 
-  // Paused wins in the header; the camera window carries the "start it with make dev" hint.
-  let streamNote: string | null = null;
-  if (paused) streamNote = copy.streamPaused;
-  else if (state.backendUnreachable) streamNote = copy.backendUnreachable(API_BASE);
+  // Paused wins in the header; the camera window carries the next step for other faults.
+  const notice = paused ? copy.streamPaused : state.backendUnreachable ? link.sentence : null;
 
   return (
     <div className={styles.page}>
-      <SiteHeader current="console" banner={banner}>
-        {server ? (
-          <p className={styles.run}>
-            Run {server.run.id}, started {shortTime(server.run.started_at)}
-          </p>
-        ) : null}
-        {streamNote !== null ? <p className={styles.streamNote}>{streamNote}</p> : null}
-        <LinkStatus
-          link={server?.link ?? null}
-          label={linkLabel(state, now)}
-          source={runSource}
-          heartbeatAgeS={heartbeatAge(state, now)}
-          lineAgeS={lastLineAge(state, now)}
-        />
-        <RunControls
-          announce={announce}
-          onStarted={(next) => dispatch({ type: 'state', state: next, at: Date.now() })}
-        />
-      </SiteHeader>
+      <SiteHeader
+        current="console"
+        source={runSource}
+        meta={
+          <>
+            {server ? (
+              <p className={styles.run}>
+                Run {server.run.id}, {server.counts.total_sorted} sorted
+              </p>
+            ) : null}
+            <LinkBadge view={link} />
+          </>
+        }
+        notice={notice !== null ? <p className={styles.notice}>{notice}</p> : null}
+      />
       <main className={styles.main}>
         <h1 className="visually-hidden">EcoSort Edge console</h1>
         <div className={styles.stage}>
           <CameraWindow
             link={server?.link ?? null}
+            linkLabel={linkLabel(state, now)}
+            paused={paused}
             runSource={runSource}
             backendUnreachable={state.backendUnreachable}
             latest={state.latest}
@@ -84,13 +88,36 @@ export function Console() {
           />
           <BinReadout counts={server?.counts ?? null} stale={paused} />
         </div>
-        <LastVerdict className={styles.last} event={server?.last_event ?? null} items={items} />
-        <ItemBreakdown className={styles.items} items={items} counts={server?.counts ?? null} />
+        <div className={styles.side}>
+          <LastVerdict
+            className={styles.last}
+            event={server?.last_event ?? null}
+            items={items}
+            loading={loading}
+          />
+          <ItemBreakdown className={styles.items} items={items} counts={server?.counts ?? null} />
+          <LinkPanel
+            className={styles.link}
+            view={link}
+            link={server?.link ?? null}
+            source={runSource}
+            heartbeatAgeS={heartbeatAge(state, now)}
+            lineAgeS={lastLineAge(state, now)}
+            run={
+              <RunControls
+                run={server?.run ?? null}
+                announce={announce}
+                onStarted={(next) => dispatch({ type: 'state', state: next, at: Date.now() })}
+              />
+            }
+          />
+        </div>
         <EventLog
-          className={styles.recent}
+          className={styles.log}
           events={state.events}
           items={items}
           latestId={state.latest?.event.id ?? null}
+          loading={loading}
         />
       </main>
       <p className="visually-hidden" aria-live="polite">

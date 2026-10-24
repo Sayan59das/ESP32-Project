@@ -1,8 +1,14 @@
 /*
   The stage (camera window plus bin readout) is one column whose width is --stage-size,
-  used by both so their edges always match. It snaps down to a multiple of 96px so the
-  enlarged 96x96 frame stays crisp: every source pixel becomes a whole number of screen
-  pixels. Browsers without CSS round() use the unsnapped value.
+  used by both so their edges always match. Its height is budgeted so the camera and the
+  counters fit above the fold: the header and camera header (~14rem), the square view, and
+  a readout about 0.6 to 0.75 of the view's width, hence (height - 14rem) / 1.75. It snaps
+  down to a multiple of 32px; at 320 and 480 the 160 by 120 frame scales by a whole number.
+  Browsers without CSS round() use the unsnapped value.
+
+  On desktop the log sits under the panels to the right of the stage, not across the full
+  width: a full-width log row would cost the stage a third of its size at 1920 by 1080, and
+  the counters must read from two metres.
 */
 .page {
   display: grid;
@@ -11,16 +17,15 @@
 }
 
 .main {
-  --stage-size: min(40vw, calc(100dvh - 25rem), 720px);
-  --numeral-size: min(var(--type-counter-size), calc(var(--stage-size) * 0.2));
+  --stage-size: clamp(288px, min(36vw, calc((100dvh - 14rem) / 1.75)), 576px);
 
   display: grid;
   grid-template-areas:
-    'stage last last'
-    'stage items recent';
-  grid-template-columns: var(--stage-size) minmax(0, 1fr) minmax(0, 2fr);
+    'stage side'
+    'stage log';
+  grid-template-columns: var(--stage-size) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
-  gap: var(--gutter);
+  gap: var(--space-2) var(--gutter);
   align-items: start;
   width: 100%;
   max-width: var(--content-max);
@@ -29,14 +34,26 @@
   padding: var(--space-2) var(--gutter);
 }
 
-@supports (width: round(down, 100px, 96px)) {
+@supports (width: round(down, 100px, 32px)) {
   .main {
-    --stage-size: round(down, min(40vw, calc(100dvh - 25rem), 720px), 96px);
+    --stage-size: round(down, clamp(288px, min(36vw, calc((100dvh - 14rem) / 1.75)), 576px), 32px);
   }
 }
 
 .stage {
   grid-area: stage;
+}
+
+.side {
+  display: grid;
+  grid-area: side;
+  grid-template-areas:
+    'last last'
+    'items link';
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: stretch;
+  min-width: 0;
 }
 
 .last {
@@ -45,46 +62,94 @@
 
 .items {
   grid-area: items;
-  align-self: stretch;
 }
 
-.recent {
-  grid-area: recent;
-  align-self: stretch;
+.link {
+  grid-area: link;
+}
+
+.log {
+  grid-area: log;
+}
+
+.log :global(div[role='region']) {
+  max-height: 60vh;
 }
 
 .run {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.streamNote {
-  font-weight: var(--type-title-wght);
+.notice {
+  font-weight: var(--weight-bold);
 }
 
-/* Desktop: the console is one screen and the log scrolls inside its own region. */
-@media (min-width: 1100px) {
+/* Wide: the three panels share one row, which leaves the log more height. */
+@media (min-width: 1600px) {
+  .side {
+    grid-template-areas: 'last items link';
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* Large displays: one screen. The log takes the height that is left and scrolls inside. */
+@media (min-width: 1100px) and (min-height: 900px) {
   .page {
     height: 100dvh;
   }
+
+  .main {
+    height: 100%;
+  }
+
+  .log {
+    align-self: stretch;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .log :global(div[role='region']) {
+    max-height: none;
+  }
 }
 
-/* Narrower: one column, in reading order, the stage at full width. */
-@media (max-width: 1099px) {
+/* Narrower: one column, in reading order, the log across the full width at the end. The
+   stage is centred and still capped by height, so on a tablet the counters stay above
+   the fold. */
+@media (max-width: 959px) {
   .main {
-    --stage-size: 100%;
-    --numeral-size: clamp(48px, 15vw, 176px);
+    --stage-size: min(100%, max(320px, calc((100dvh - 14rem) / 1.75)));
 
     grid-template-areas:
       'stage'
-      'last'
-      'items'
-      'recent';
+      'side'
+      'log';
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
+    gap: var(--space-2);
   }
 
-  .recent {
-    max-height: 70vh;
+  @supports (width: round(down, 100px, 32px)) {
+    .main {
+      --stage-size: min(100%, round(down, max(320px, calc((100dvh - 14rem) / 1.75)), 32px));
+    }
+  }
+
+  /* An explicit width, so the centring does not depend on the children's percentages. */
+  .stage {
+    width: var(--stage-size);
+    margin-inline: auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .side {
+    grid-template-areas:
+      'last'
+      'link'
+      'items';
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

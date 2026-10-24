@@ -20,28 +20,11 @@ export function percent(fraction: number): string {
   return `${Math.round(fraction * 100)}%`;
 }
 
-/** The recycle rate as a percentage, or a dash when nothing is sorted yet. */
-export function rateText(rate: number | null): string {
-  return rate === null ? copy.noRate : percent(rate);
-}
-
-/** The other bin's share, or a dash when nothing is sorted yet. */
-export function trashRateText(rate: number | null): string {
-  return rate === null ? copy.noRate : percent(1 - rate);
-}
-
-export const SPLIT_MIN = 0.3;
-export const SPLIT_MAX = 0.7;
-/** Below this the clamp is too small to see, and a true-ratio mark would read as a glitch. */
-const VISIBLE_CLAMP = 0.03;
-
-/** Where the boundary between the bins sits: the recycle rate, clamped so both numerals
- *  fit, resting at the middle when nothing is sorted. `clamped` is true when the boundary
- *  visibly misstates the ratio, so the readout can mark the true one. */
-export function splitFor(rate: number | null): { split: number; clamped: boolean } {
-  if (rate === null) return { split: 0.5, clamped: false };
-  const split = Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, rate));
-  return { split, clamped: Math.abs(split - rate) >= VISIBLE_CLAMP };
+/** A bin's share of the sorted items, from the server's recycle rate. Says so in words when
+ *  nothing is sorted yet: never 0%, a dash or NaN. */
+export function binShare(rate: number | null, bin: 'recyclable' | 'trash'): string {
+  if (rate === null) return copy.nothingSorted;
+  return `${percent(bin === 'recyclable' ? rate : 1 - rate)} of sorted items`;
 }
 
 export function binWord(bin: StoredBin): string {
@@ -62,9 +45,13 @@ export function itemName(event: Pick<Event, 'label' | 'bin'>, items: ItemCount[]
   return items.find((item) => item.label === event.label)?.display_name ?? event.label;
 }
 
+/** Seconds as a short duration: "3 s", "2 min". */
+export function duration(seconds: number): string {
+  if (seconds < 60) return `${Math.floor(seconds)} s`;
+  return `${Math.floor(seconds / 60)} min`;
+}
+
 /** Seconds as a short age: "3 s ago", "2 min ago". */
 export function age(seconds: number | null): string {
-  if (seconds === null) return 'never';
-  if (seconds < 60) return `${Math.floor(seconds)} s ago`;
-  return `${Math.floor(seconds / 60)} min ago`;
+  return seconds === null ? 'never' : `${duration(seconds)} ago`;
 }

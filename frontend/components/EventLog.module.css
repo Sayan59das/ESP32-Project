@@ -1,31 +1,18 @@
-.log {
+/* On the one-screen desktop layout the card fills its row and the table scrolls inside. */
+.body {
   display: flex;
+  flex: 1;
   flex-direction: column;
-}
-
-.header {
-  display: flex;
-  gap: var(--space-2);
-  align-items: baseline;
-  justify-content: space-between;
-}
-
-.export {
-  padding: var(--space-half) var(--space-1);
-  border-radius: var(--radius-button);
-  background: var(--ground);
-  color: var(--ink);
-  text-decoration: none;
-}
-
-.export:hover {
-  text-decoration: underline;
+  min-height: 0;
+  padding-top: var(--space-1);
 }
 
 .scroller {
-  flex: 1 1 auto;
+  flex: 1;
   min-height: 0;
+  max-height: 100%;
   overflow: auto;
+  border-radius: var(--radius-sm);
 }
 
 .table {
@@ -33,14 +20,17 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The header stays put while the rows scroll under it. */
 .head,
 .headNumber {
   position: sticky;
   top: 0;
-  padding: var(--space-half) var(--space-1) var(--space-half) 0;
-  background: var(--surface);
+  z-index: 1;
+  padding: var(--space-1) var(--space-1-5);
+  background: var(--surface-sunk);
   color: var(--ink-muted);
-  font-weight: var(--type-body-wght);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
   text-align: left;
   white-space: nowrap;
 }
@@ -49,101 +39,149 @@
   text-align: right;
 }
 
-.row {
-  border-top: 1px solid var(--ground);
+.row td {
+  border-bottom: var(--border);
 }
 
-.rowUnsure {
-  color: var(--ink-muted);
-}
-
-.rowNew {
-  animation: row-highlight var(--motion-row-fade) linear both;
+/* The newest row: a calm tint, set in phase 3 with the count-change highlight. */
+.rowNew td {
+  background: var(--surface);
 }
 
 .cell {
-  padding: var(--space-half) var(--space-2) var(--space-half) 0;
-  white-space: nowrap;
+  padding: var(--space-1) var(--space-1-5);
+  vertical-align: middle;
 }
 
 .number {
-  padding: var(--space-half) 0 var(--space-half) var(--space-2);
+  padding: var(--space-1) var(--space-1-5);
   text-align: right;
   white-space: nowrap;
 }
 
-.itemName,
-.binName {
-  display: block;
-  line-height: 1.3;
+.time {
+  white-space: nowrap;
 }
 
-.binName {
-  font-size: 14px;
+.verdict {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+}
+
+.sub {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
 }
 
 .thumbButton {
   display: block;
   padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--video-bed);
+  overflow: hidden;
 }
 
-.thumb {
+.thumb,
+.noThumb {
   display: block;
   width: 48px;
   height: 48px;
+  object-fit: contain;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
 }
 
-.dialog {
-  max-width: min(100vw - var(--space-4), 480px);
-  padding: var(--space-3);
-  border: 0;
-  border-radius: var(--radius-button);
-  background: var(--surface);
-  color: var(--ink);
+.noThumb {
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
 }
 
-.dialog::backdrop {
-  background: var(--backdrop, rgb(16 20 18 / 0.55));
+.empty {
+  max-width: var(--measure);
+  color: var(--ink-muted);
+}
+
+.loading {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.loadingRow {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* The frame dialog */
+.frameView {
+  display: grid;
+  grid-template-columns: minmax(0, 384px) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
 }
 
 .bigFrame {
-  width: 384px;
-  max-width: 100%;
+  width: 100%;
   height: auto;
   aspect-ratio: 1 / 1;
-  margin: var(--space-2) 0;
+  border-radius: var(--radius-sm);
+  background: var(--video-bed);
+  object-fit: contain;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
 }
 
 .facts {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--space-half) var(--space-2);
-  margin-bottom: var(--space-3);
-  font-variant-numeric: tabular-nums;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
 }
 
-.close {
-  padding: var(--space-1) var(--space-2);
-  border: 0;
-  border-radius: var(--radius-button);
-  background: var(--ink);
-  color: var(--ground);
+.facts dt {
+  color: var(--ink-muted);
 }
 
-@keyframes row-highlight {
-  from {
-    background-color: color-mix(in srgb, var(--hivis) var(--row-highlight), transparent);
+.facts dd {
+  overflow-wrap: anywhere;
+}
+
+/* Inference time is the first column to go when the table runs out of width. */
+@media (max-width: 767px) {
+  .wide {
+    display: none;
   }
-  to {
-    background-color: transparent;
+
+  .frameView {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .rowNew {
-    animation: none;
+.timeInline {
+  display: none;
+}
+
+/* A phone: the time folds under the verdict, so every remaining column fits. */
+@media (max-width: 480px) {
+  .timeColumn {
+    display: none;
+  }
+
+  .timeInline {
+    display: inline;
+  }
+}
+
+@media (max-width: 420px) {
+  .cell,
+  .number,
+  .head,
+  .headNumber {
+    padding-right: var(--space-1);
+    padding-left: var(--space-1);
   }
 }
