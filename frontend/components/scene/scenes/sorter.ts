@@ -8,7 +8,6 @@
 
 import {
   AdditiveBlending,
-  CircleGeometry,
   Color,
   CylinderGeometry,
   DoubleSide,
@@ -25,7 +24,6 @@ import {
   PlaneGeometry,
   PointLight,
   Shape,
-  ShaderMaterial,
   SphereGeometry,
   TorusGeometry,
   Vector3,
@@ -60,32 +58,40 @@ const CROWN_Y = ringY(RING_COUNT - 1) + STAVE_H / 2 + 0.02;
 const CROWN_RADIUS = 3.4;
 const CROWN_THICK = 0.5;
 
-/** Where each part of the lid sits, in degrees round the bin, and what it stands for. */
+/**
+ * Where each part of the lid sits, in degrees round the bin, and what it stands for. Recyclable
+ * is at the front and Trash at the right, where the camera sees them; Unsure, the rarest, is at
+ * the back.
+ */
 const LID = [
   { outcome: 'recyclable', from: 30, to: 150 },
-  { outcome: 'trash', from: 150, to: 270 },
-  { outcome: 'unsure', from: 270, to: 390 },
+  { outcome: 'trash', from: 270, to: 390 },
+  { outcome: 'unsure', from: 150, to: 270 },
 ] as const;
 const LID_GAP = 0.05;
+/** How far a part of the lid tips up to take an item, at most (radians). */
+const LID_OPENS = 0.62;
 
-const HALO_VERTEX = /* glsl */ `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
+export type Outcome = (typeof LID)[number]['outcome'];
 
-const HALO_FRAGMENT = /* glsl */ `
-  uniform vec3 uColor;
-  uniform float uOpacity;
-  varying vec2 vUv;
-  void main() {
-    float d = length(vUv - 0.5) * 2.0;
-    float a = pow(1.0 - smoothstep(0.0, 1.0, d), 2.4);
-    gl_FragColor = vec4(uColor, a * uOpacity);
-  }
-`;
+/** The direction of each lid part round the bin, as atan2(z, x). Items arrive from there. */
+export const LID_AZIMUTH: Record<Outcome, number> = {
+  recyclable: (90 * Math.PI) / 180,
+  trash: (330 * Math.PI) / 180,
+  unsure: (210 * Math.PI) / 180,
+};
+
+/**
+ * Where an item that is taken in comes to rest, and how high it passes over the rim, for a bin
+ * opened by `explode` (the bin's rings rise as the story goes on, and the mouth with them).
+ */
+export const mouth = (explode: number) => ({
+  /** Just above the top disc of light, where the item dissolves into the glow. */
+  floor: CROWN_Y + 0.15 + explode * lift(RING_COUNT - 1),
+  /** Under the tipped-up lid part, above the closed ones. */
+  over: CROWN_Y + 1.7 + explode * (lift(RING_COUNT - 1) + 0.9),
+  rim: CROWN_RADIUS + 0.4,
+});
 
 interface Stave {
   ring: number;
@@ -110,6 +116,10 @@ export interface Sorter {
     intro: number;
     explode: number;
     flash: number;
+    /** How far each part of the lid is tipped up to take an item, 0 to 1. */
+    lid: Record<Outcome, number>;
+    /** How much of its glow the bin shows, 0 to 1: less when it fills the picture. */
+    glow: number;
     motion: boolean;
     palette: Palette;
     quality: Quality;
@@ -251,10 +261,21 @@ export function createSorter(): Sorter {
     const lidMesh = new Mesh(geometry, material);
     lidMesh.castShadow = true;
     lidMesh.receiveShadow = true;
-    crown.add(lidMesh);
+    // The pivot moves and turns the part with the rest of the bin; the part itself tips about
+    // the line through the hub that is square to the way it points.
+    const pivot = new Group();
+    pivot.add(lidMesh);
+    crown.add(pivot);
     lidGeometries.push(geometry);
     lidMaterials.push(material);
-    return { mesh: lidMesh, middle: (from + to) / 2 };
+    const middle = (from + to) / 2;
+    return {
+      pivot,
+      mesh: lidMesh,
+      middle,
+      outcome: part.outcome,
+      axis: new Vector3(Math.sin(middle), 0, -Math.cos(middle)),
+    };
   });
   const hubMaterial = new MeshStandardMaterial({ color: 0x1b252b, metalness: 0.9, roughness: 0.3 });
   const hub = new Mesh(new CylinderGeometry(0.75, 0.9, CROWN_THICK + 0.1, 40), hubMaterial);
@@ -326,7 +347,7 @@ export function createSorter(): Sorter {
   beacon.position.y = topY;
   group.add(beacon);
 
-  // A beam of light rising from the beacon, and a pool of it on the ground.
+  // A beam of light rising from the beacon.
   const beamMaterial = new MeshBasicMaterial({
     color: new Color(0xbfeaff),
     transparent: true,
@@ -338,18 +359,6 @@ export function createSorter(): Sorter {
   });
   const beam = new Mesh(new CylinderGeometry(0.08, 0.5, 48, 28, 1, true), beamMaterial);
   group.add(beam);
-  const haloMaterial = new ShaderMaterial({
-    vertexShader: HALO_VERTEX,
-    fragmentShader: HALO_FRAGMENT,
-    uniforms: { uColor: { value: new Color(0xbfeaff) }, uOpacity: { value: 0.2 } },
-    transparent: true,
-    depthWrite: false,
-    blending: AdditiveBlending,
-  });
-  const halo = new Mesh(new CircleGeometry(12, 64), haloMaterial);
-  halo.rotation.x = -Math.PI / 2;
-  halo.position.y = 0.06;
-  group.add(halo);
 
   // Where the labels attach.
   const anchorLens = new Object3D();
@@ -369,29 +378,27 @@ export function createSorter(): Sorter {
   return {
     group,
     anchors: { lens: anchorLens, top: anchorTop, frame: anchorFrame },
-    update({ time, intro, explode, flash, motion, palette, quality }) {
+    update({ time, intro, explode, flash, lid, glow, motion, palette, quality }) {
       const e = explode;
       staveMaterial.color.copy(palette.body);
       padMaterial.color.copy(palette.stone);
 
       // How bright the light inside is: steady, breathing a little, and flashing on a count.
       const breathe = motion ? 0.92 + 0.08 * Math.sin(time * 1.3) : 1;
-      const level = palette.glowIntensity * breathe * (1 + flash * 1.6);
+      const level = palette.glowIntensity * glow * breathe * (1 + flash * 1.6);
       // Without bloom the colour must stay within 0 to 1 or it clips to white.
       const k = quality === 'low' ? Math.min(level, 1) : level;
       glowColour.copy(palette.glow).multiplyScalar(k);
       coreMaterial.color.copy(glowColour);
       beaconMaterial.color.copy(glowColour);
-      markMaterial.color.copy(palette.glow).multiplyScalar(Math.min(k, 1.6));
+      markMaterial.color.copy(palette.glow).multiplyScalar(Math.min(k, 1.6) * (0.5 + 0.5 * glow));
       (padRing.material as MeshBasicMaterial).color.copy(glowColour);
       (rim.material as MeshBasicMaterial).color.copy(glowColour);
       glowLight.color.copy(palette.glow);
-      glowLight.intensity = 26 * (0.6 + palette.glowIntensity * 0.25) * breathe * (1 + flash);
+      glowLight.intensity =
+        16 * (0.6 + palette.glowIntensity * 0.25) * glow * breathe * (1 + flash);
       beamMaterial.color.copy(palette.glow);
       beamMaterial.opacity = (0.02 + 0.03 * palette.glowIntensity) * (1 + flash * 1.5);
-      (haloMaterial.uniforms.uColor!.value as Color).copy(palette.glow);
-      haloMaterial.uniforms.uOpacity!.value =
-        Math.max(0.03, 0.09 * (palette.glowIntensity - 1.2)) * breathe * (1 + flash * 1.2);
 
       // The ribs.
       for (let i = 0; i < staves.length; i++) {
@@ -456,12 +463,14 @@ export function createSorter(): Sorter {
       lidParts.forEach((part, i) => {
         const breath = motion ? 0.035 * Math.sin(time * 1.2 + i * 2.1) : 0;
         const away = e * 1.5;
-        part.mesh.position.set(
+        part.pivot.position.set(
           Math.cos(part.middle) * away,
           breath + e * (i - 1) * 0.35,
           Math.sin(part.middle) * away,
         );
-        part.mesh.rotation.y = (1 - settle) * (i + 1) * 1.1 + e * (i - 1) * 0.12;
+        part.pivot.rotation.y = (1 - settle) * (i + 1) * 1.1 + e * (i - 1) * 0.12;
+        // Tipped up (a negative turn about its axis) while an item is on its way in.
+        part.mesh.quaternion.setFromAxisAngle(part.axis, -LID_OPENS * lid[part.outcome]);
         const material = lidMaterials[i];
         if (material) material.emissiveIntensity = 0.08 + flash * 0.9;
       });
@@ -472,7 +481,6 @@ export function createSorter(): Sorter {
       beacon.rotation.x = 0.4;
       beam.position.y = beacon.position.y + 24;
       beam.visible = open > 0.6;
-      halo.scale.setScalar(0.4 + 0.6 * open);
       anchorFrame.position.y = lens.position.y;
       pad.scale.setScalar(open);
       padRing.scale.setScalar(open);
@@ -500,7 +508,7 @@ export function createSorter(): Sorter {
       markPlate.geometry.dispose();
       markMaterial.dispose();
       markTexture.dispose();
-      for (const part of [housing, rim, glass, pupil, beacon, beam, halo]) {
+      for (const part of [housing, rim, glass, pupil, beacon, beam]) {
         part.geometry.dispose();
         (part.material as MeshBasicMaterial).dispose();
       }

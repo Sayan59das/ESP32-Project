@@ -30,6 +30,7 @@ import type { BuildContext, FrameState, Quality, SceneModule } from '../engine/t
 import { createFrameScreen } from './frames';
 import { createLane } from './lane';
 import { createPipeline } from './pipeline';
+import { createPool } from './pool';
 import { createPylons, type PylonSpec } from './pylons';
 import { createSky } from './sky';
 import { createSorter } from './sorter';
@@ -42,8 +43,9 @@ export const HOME_CHAPTERS = 8;
 // and the next arrive. The extra keys are moves made on the way: a pull back to see the whole
 // lane (5.0), and a slide along the pipeline (5.4 to 5.75).
 const KEYS: Key[] = [
-  { at: centreOf(0), pos: [7.9, 3.1, 13.8], look: [0, 3.9, 0], fov: 40, shift: 0.17 },
-  { at: centreOf(1), pos: [8.4, 2.6, 10.6], look: [-0.6, 3.7, 0.4], fov: 40, shift: -0.15 },
+  // The whole bin, and the items coming in over its lid, in the opening picture.
+  { at: centreOf(0), pos: [9.4, 4.4, 17.6], look: [0, 4.9, 0], fov: 42, shift: 0.17 },
+  { at: centreOf(1), pos: [9.4, 3.9, 12.4], look: [-0.5, 4.6, 0.4], fov: 40, shift: -0.15 },
   { at: centreOf(2), pos: [2.8, 3.7, 13.4], look: [0.2, 3.45, 3.4], fov: 38, shift: 0.16 },
   { at: centreOf(3), pos: [13.6, 9.2, 11.6], look: [20.2, 0.6, 0], fov: 44, shift: 0.09 },
   { at: centreOf(4), pos: [9.4, 2.3, 6.6], look: [14.4, 1.6, 0], fov: 36, shift: -0.14 },
@@ -52,7 +54,7 @@ const KEYS: Key[] = [
   { at: centreOf(5), pos: [-47.5, 7.4, 32], look: [-47.5, -0.4, 0], fov: 38, shift: 0 },
   // The towers stand in the left of the picture, clear of the words on the right.
   { at: centreOf(6), pos: [0, 5.8, 60], look: [0, 5, 34], fov: 42, shift: -0.2 },
-  { at: centreOf(7), pos: [8.8, 3.4, 14.8], look: [0, 3.9, 0], fov: 40, shift: 0.17 },
+  { at: centreOf(7), pos: [9.4, 4.4, 17.6], look: [0, 4.9, 0], fov: 42, shift: 0.17 },
 ];
 
 /** How far the Sorter has opened at each chapter: 0 is closed, 1 is fully apart. */
@@ -65,6 +67,36 @@ const EXPLODE: readonly (readonly [number, number])[] = [
   [centreOf(5), 1],
   [centreOf(6), 0.25],
   [centreOf(7), 0],
+];
+
+/** How much of its glow the Sorter shows: less while it fills the picture, so the glow is the
+ *  same amount in every chapter and not a flare in the close-ups. */
+const SORTER_GLOW: readonly (readonly [number, number])[] = [
+  [centreOf(0), 1],
+  [centreOf(1), 0.55],
+  [centreOf(2), 0.5],
+  [centreOf(3), 0.8],
+  [centreOf(4), 1],
+];
+
+/** How wide and how deep the pool of light under the story's focus is, at each chapter. */
+const POOL_ACROSS: readonly (readonly [number, number])[] = [
+  [centreOf(0), 12],
+  [centreOf(3), 13],
+  [centreOf(4), 9],
+  [5.0, 14],
+  [centreOf(5), 34],
+  [centreOf(6), 16],
+  [centreOf(7), 12],
+];
+const POOL_ALONG: readonly (readonly [number, number])[] = [
+  [centreOf(0), 12],
+  [centreOf(3), 9],
+  [centreOf(4), 8],
+  [5.0, 12],
+  [centreOf(5), 9],
+  [centreOf(6), 14],
+  [centreOf(7), 12],
 ];
 
 /** What the page tells the scene about the checks: only counts, nothing it could embellish. */
@@ -104,6 +136,9 @@ export function buildHomeScene(context: BuildContext, data?: unknown): SceneModu
     Math.hypot(x, z) < 6;
   const terrain = createTerrain({ segments: context.quality === 'low' ? 48 : 96, keepClear });
   scene.add(terrain.group);
+
+  const pool = createPool();
+  scene.add(pool.mesh);
 
   const sorter = createSorter();
   scene.add(sorter.group);
@@ -183,14 +218,16 @@ export function buildHomeScene(context: BuildContext, data?: unknown): SceneModu
       // Glow spreads over a picture it sits in front of, which would tint the frame the model
       // reads. Hold it back while that frame is on screen.
       const framing = window01(state.chapter, 2.15, 2.85, 0.4);
-      world.bloom.strength = quality === 'low' ? 0 : palette.bloomStrength * (1 - 0.8 * framing);
+      world.bloom.strength = quality === 'low' ? 0 : palette.bloomStrength * (1 - 0.5 * framing);
       sky.update(palette, state.dark);
       terrain.update(palette);
 
       // The lane runs first: when an item is under the gate the Sorter's light flares.
-      const counted = lane.update({
+      const explode = curve01(EXPLODE, state.chapter);
+      const laneState = lane.update({
         time: state.time,
         chapter: state.chapter,
+        explode,
         motion: state.motion,
         palette,
       });
@@ -198,8 +235,10 @@ export function buildHomeScene(context: BuildContext, data?: unknown): SceneModu
       sorter.update({
         time: state.time,
         intro: state.intro,
-        explode: curve01(EXPLODE, state.chapter),
-        flash: counted * 0.55,
+        explode,
+        flash: Math.max(laneState.pulse * 0.55, laneState.drop * 0.45),
+        lid: laneState.open,
+        glow: curve01(SORTER_GLOW, state.chapter),
         motion: state.motion,
         palette,
         quality,
@@ -229,6 +268,14 @@ export function buildHomeScene(context: BuildContext, data?: unknown): SceneModu
             (smoothstep(5.45, 5.95, state.chapter) - 0.5) *
             21
           : 0;
+      pool.update({
+        x: pose.look[0] + follow,
+        z: pose.look[2],
+        across: curve01(POOL_ACROSS, state.chapter),
+        along: curve01(POOL_ALONG, state.chapter),
+        strength: smoothstep(0.25, 0.9, state.intro),
+        palette,
+      });
       const sway = state.motion ? 1 : 0;
       camera.position.set(
         pose.pos[0] + follow + Math.sin(state.time * 0.17) * 0.28 * sway + state.pointer.x * 0.55,
@@ -258,6 +305,7 @@ export function buildHomeScene(context: BuildContext, data?: unknown): SceneModu
     dispose() {
       sky.dispose();
       terrain.dispose();
+      pool.dispose();
       sorter.dispose();
       frame.dispose();
       lane.dispose();

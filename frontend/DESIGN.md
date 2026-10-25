@@ -148,8 +148,17 @@ simulated data is never shown as real; the three outcomes keep their colours and
   and the silos and sheds of a plant fading into the distance), the Sorter (a ribbed bin with a
   lens, a recycling mark and a lid in the three outcome colours), a lane and three bins that
   carry their outcome's mark, a pipeline of glass blocks, towers of light, screens, a field of
-  photograph tiles, empty frames. Scraps of paper drift through the air. Light and dark are two
-  palettes of the same world (`engine/palette.ts`); the outcome colours do not change.
+  photograph tiles, empty frames. Scraps of paper drift through the air. In the opening chapters
+  a stream of items arcs in over the Sorter's rim, tips up the part of its lid for the item's
+  outcome (grey Trash at the right, green Recyclable at the front, amber Unsure at the back),
+  drops in and dissolves into the glow; later the same items wait for the belt. This is an
+  illustration, like the lane: it carries no count. Light and dark are two palettes of the same
+  world (`engine/palette.ts`); the outcome colours do not change.
+- **Balance.** The glow is the same amount in every chapter. A soft pool of light on the ground
+  follows the camera's focus (`scenes/pool.ts`), the Sorter shows less glow while it fills the
+  picture, and the dark world is lit enough to read in every chapter. Check it with the average
+  brightness and the share of green-glow pixels in a still of each chapter in both themes; they
+  should stay within a narrow band, with no chapter nearly black or washed out.
 - **The camera** follows a spline through poses keyed to chapters (`lib/scene/rig.ts`), resting
   while a chapter's card is pinned and moving between chapters. The reader's position drives it
   through a critically damped spring (`smoothDamp` in `lib/scene/math.ts`), so a wheel's steps,
@@ -169,7 +178,9 @@ simulated data is never shown as real; the three outcomes keep their colours and
   frames; a software renderer is forced to the lowest. If one in ten recent frames is slow it
   steps down: shadows and multisampling first, then fewer pixels a step at a time, then bloom.
   It never steps back up. Every shader is compiled and every generated texture uploaded before
-  the first frame, so nothing stalls when a chapter's objects first come into view. Only the
-  home and testing pages load three.js.
+  the first frame, so nothing stalls when a chapter's objects first come into view. A shader is
+  built for where it draws, so the compile runs against the off-screen buffer the bloom works
+  on; compiling against the screen would leave every object to compile when it is first seen.
+  Only the home and testing pages load three.js.
 - **Contrast.** Small text straight on the world is `--ink` only, checked against the world's
   mist and ground colours (`--scene-mist`, `--scene-ground`, kept in step with the palette).

@@ -44,7 +44,7 @@ export interface Sky {
 }
 
 const ZENITH_LIGHT = new Color(0xb9cdd8);
-const ZENITH_DARK = new Color(0x02050a);
+const ZENITH_DARK = new Color(0x0a1a16);
 
 export function createSky(): Sky {
   const group = new Group();

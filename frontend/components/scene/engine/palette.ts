@@ -24,6 +24,8 @@ export interface Palette {
   glowIntensity: number;
   dust: Color;
   dustOpacity: number;
+  /** How strongly the pool of light under the story's focus shows. */
+  poolOpacity: number;
   envIntensity: number;
   exposure: number;
   bloomStrength: number;
@@ -33,8 +35,8 @@ const hex = (c: number): Color => new Color(c);
 
 const LIGHT = {
   fog: hex(0xd7e3de),
-  fogDensity: 0.0105,
-  ground: hex(0xc3cbc6),
+  fogDensity: 0.0088,
+  ground: hex(0xb9c2bd),
   stone: hex(0x9aaca4),
   body: hex(0x3d4c46),
   paint: hex(0xd9a91a),
@@ -44,33 +46,35 @@ const LIGHT = {
   sun: hex(0xfff0d8),
   sunIntensity: 2.3,
   glow: hex(0x9ff0cb),
-  glowIntensity: 1.7,
+  glowIntensity: 1.35,
   dust: hex(0x9db3a9),
   dustOpacity: 0.2,
+  poolOpacity: 0.22,
   envIntensity: 0.42,
   exposure: 0.88,
-  bloomStrength: 0.26,
+  bloomStrength: 0.2,
 };
 
 const DARK = {
-  fog: hex(0x08130f),
-  fogDensity: 0.0138,
-  ground: hex(0x0f1c17),
-  stone: hex(0x4f645b),
-  body: hex(0x566d64),
+  fog: hex(0x0e1f19),
+  fogDensity: 0.0125,
+  ground: hex(0x1b2e26),
+  stone: hex(0x61786c),
+  body: hex(0x3f544b),
   paint: hex(0x8a6c12),
   hemiSky: hex(0x5d7f8e),
   hemiGround: hex(0x08100d),
-  hemiIntensity: 0.7,
-  sun: hex(0xa9c4ff),
-  sunIntensity: 1.1,
+  hemiIntensity: 1.15,
+  sun: hex(0xb7cdf5),
+  sunIntensity: 1.8,
   glow: hex(0x5cf0b0),
-  glowIntensity: 2.7,
+  glowIntensity: 1.75,
   dust: hex(0xcdf5e4),
   dustOpacity: 0.3,
-  envIntensity: 0.5,
-  exposure: 1.1,
-  bloomStrength: 0.62,
+  poolOpacity: 0.5,
+  envIntensity: 0.7,
+  exposure: 1.12,
+  bloomStrength: 0.3,
 };
 
 export function createPalette(): Palette {
@@ -90,6 +94,7 @@ export function createPalette(): Palette {
     glowIntensity: 0,
     dust: new Color(),
     dustOpacity: 0,
+    poolOpacity: 0,
     envIntensity: 0,
     exposure: 1,
     bloomStrength: 0,
@@ -113,6 +118,7 @@ export function paletteAt(dark: number, out: Palette): Palette {
   out.sunIntensity = mix(LIGHT.sunIntensity, DARK.sunIntensity, dark);
   out.glowIntensity = mix(LIGHT.glowIntensity, DARK.glowIntensity, dark);
   out.dustOpacity = mix(LIGHT.dustOpacity, DARK.dustOpacity, dark);
+  out.poolOpacity = mix(LIGHT.poolOpacity, DARK.poolOpacity, dark);
   out.envIntensity = mix(LIGHT.envIntensity, DARK.envIntensity, dark);
   out.exposure = mix(LIGHT.exposure, DARK.exposure, dark);
   out.bloomStrength = mix(LIGHT.bloomStrength, DARK.bloomStrength, dark);

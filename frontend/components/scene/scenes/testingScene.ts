@@ -31,7 +31,9 @@ import { createPalette, paletteAt } from '../engine/palette';
 import { createScraps } from '../engine/scraps';
 import type { BuildContext, FrameState, Quality, SceneModule } from '../engine/types';
 import { createField, type FieldSpec } from './field';
+import { createLane } from './lane';
 import { createMedia, type MediaSpec } from './media';
+import { createPool } from './pool';
 import { createPylons, type PylonSpec } from './pylons';
 import { createSky } from './sky';
 import { createSorter } from './sorter';
@@ -70,13 +72,13 @@ function view(at: number, set: number, camera: V3, look: V3, fov: number, shift:
 }
 
 const KEYS: Key[] = [
-  { at: centreOf(0), pos: [7.9, 3.1, 13.8], look: [0, 3.9, 0], fov: 40, shift: 0.17 },
+  { at: centreOf(0), pos: [9.4, 4.4, 17.6], look: [0, 4.9, 0], fov: 42, shift: 0.17 },
   view(centreOf(1), PYLONS, [0, 6.9, 30.5], [0, 5.2, 0], 42, 0.12),
   // The row of screens along the top of the picture, its words along the bottom.
   view(centreOf(2), STATIONS, [0, 7, 28], [0, -0.6, 0], 44, 0),
   view(centreOf(3), FIELD, [0, 14.5, 25], [0, 0, -2.5], 44, -0.17),
   view(centreOf(4), MEDIA, [0, 4.6, 21], [0, 3.7, 0], 42, 0.165),
-  { at: centreOf(5), pos: [-8.8, 3.4, 14.8], look: [0, 3.9, 0], fov: 40, shift: -0.17 },
+  { at: centreOf(5), pos: [-9.4, 4.4, 17.6], look: [0, 4.9, 0], fov: 42, shift: -0.17 },
 ];
 
 /** What the page tells the scene: counts and outcomes, nothing it could embellish. */
@@ -164,9 +166,14 @@ export function buildTestingScene(context: BuildContext, data?: unknown): SceneM
   const terrain = createTerrain({ segments: context.quality === 'low' ? 48 : 96, keepClear });
   scene.add(terrain.group);
 
-  // The product, in the middle of the ring.
+  const pool = createPool();
+  scene.add(pool.mesh);
+
+  // The product, in the middle of the ring, taking in a stream of items.
   const sorter = createSorter();
   scene.add(sorter.group);
+  const feed = createLane({ sorting: false });
+  scene.add(feed.group);
   anchors.set('top', sorter.anchors.top);
   anchors.set('lens', sorter.anchors.lens);
 
@@ -243,11 +250,20 @@ export function buildTestingScene(context: BuildContext, data?: unknown): SceneM
       sky.update(palette, state.dark);
       terrain.update(palette);
 
+      const fed = feed.update({
+        time: state.time,
+        chapter: state.chapter,
+        explode: 0,
+        motion: state.motion,
+        palette,
+      });
       sorter.update({
         time: state.time,
         intro: state.intro,
         explode: 0,
-        flash: 0,
+        flash: fed.drop * 0.45,
+        lid: fed.open,
+        glow: 1,
         motion: state.motion,
         palette,
         quality,
@@ -306,8 +322,16 @@ export function buildTestingScene(context: BuildContext, data?: unknown): SceneM
       camera.lookAt(pose.look[0] + dx, pose.look[1], pose.look[2] + dz);
       built.viewShift = pose.shift;
 
-      // The sun and its shadow follow what the camera is looking at.
+      // The sun and its shadow follow what the camera is looking at, and so does a pool of light.
       focus.set(pose.look[0] + dx, 0, pose.look[2] + dz);
+      pool.update({
+        x: focus.x,
+        z: focus.z,
+        across: 17,
+        along: 14,
+        strength: smoothstep(0.25, 0.9, state.intro),
+        palette,
+      });
       sun.target.position.copy(focus);
       sun.position.set(focus.x + 18, 26, focus.z + 15);
 
@@ -324,7 +348,9 @@ export function buildTestingScene(context: BuildContext, data?: unknown): SceneM
     dispose() {
       sky.dispose();
       terrain.dispose();
+      pool.dispose();
       sorter.dispose();
+      feed.dispose();
       pylons.dispose();
       stations.dispose();
       field?.dispose();

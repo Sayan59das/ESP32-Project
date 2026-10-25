@@ -35,6 +35,7 @@ import { type Glyph, glyphTexture } from '../engine/glyphs';
 import type { Palette } from '../engine/palette';
 import { OUTCOME } from '../engine/palette';
 import { grainNormalMap } from '../engine/textures';
+import { LID_AZIMUTH, mouth } from './sorter';
 
 type Kind = 'can' | 'foil' | 'phone' | 'unsure';
 type Outcome = 'recyclable' | 'trash' | 'unsure';
@@ -65,6 +66,10 @@ const SORT_SPAN = 1.5;
 const TRANSIT = 0.24;
 /** Where on an item's journey it passes under the gate. */
 const AT_GATE = 0.3;
+/** Seconds between one item setting off for the bin and the same one setting off again. */
+const FEED_PERIOD = 15;
+/** The share of that period an item spends in the air, on its way in. */
+const FEED_FLIGHT = 2.7 / FEED_PERIOD;
 
 const SCAN_VERTEX = /* glsl */ `
   varying vec2 vUv;
@@ -93,13 +98,32 @@ const SCAN_FRAGMENT = /* glsl */ `
   }
 `;
 
+export interface LaneState {
+  /** How strongly an item is being counted under the gate right now, 0 to 1. */
+  pulse: number;
+  /** How far each part of the bin's lid should be tipped up for an item on its way in, 0 to 1. */
+  open: Record<Outcome, number>;
+  /** How strongly an item is just now dissolving into the bin, 0 to 1. */
+  drop: number;
+}
+
 export interface Lane {
   group: Group;
   anchors: { gate: Object3D; recyclable: Object3D; trash: Object3D; unsure: Object3D };
-  /** Returns how strongly an item is being counted right now, 0 to 1. */
-  update(args: { time: number; chapter: number; motion: boolean; palette: Palette }): number;
+  update(args: {
+    time: number;
+    chapter: number;
+    /** How far the Sorter has opened: the mouth it feeds rises with it. */
+    explode: number;
+    motion: boolean;
+    palette: Palette;
+  }): LaneState;
   dispose(): void;
 }
+
+/** A point on the quadratic curve that starts at `a`, bends toward `b` and ends at `c`. */
+const bezier = (a: number, b: number, c: number, f: number): number =>
+  (1 - f) * (1 - f) * a + 2 * (1 - f) * f * b + f * f * c;
 
 /**
  * A bin that widens toward its open top, on two wheels at the back, with its lid thrown back
@@ -229,7 +253,11 @@ function bin(
   };
 }
 
-export function createLane(): Lane {
+/**
+ * With `sorting` the lane has its belt, gate and bins, and after the opening chapters the items
+ * go down it. Without, there is only the stream of items going into the Sorter, all the time.
+ */
+export function createLane(options: { sorting: boolean } = { sorting: true }): Lane {
   const group = new Group();
   const rand = mulberry32(31);
   const normalMap = grainNormalMap(256, 1.1, 5);
@@ -300,10 +328,17 @@ export function createLane(): Lane {
   group.add(gateAnchor);
 
   // -- the three places an item can end up --------------------------------------------------
-  const recyclableBin = bin(OUTCOME.recyclable.clone().multiplyScalar(0.62), 'recyclable', 3.5, 2.8, 1.6, {
-    lid: true,
-    wheels: true,
-  });
+  const recyclableBin = bin(
+    OUTCOME.recyclable.clone().multiplyScalar(0.62),
+    'recyclable',
+    3.5,
+    2.8,
+    1.6,
+    {
+      lid: true,
+      wheels: true,
+    },
+  );
   recyclableBin.group.position.set(BIN_X, 0, BIN_Z.recyclable);
   const trashBin = bin(OUTCOME.trash.clone().multiplyScalar(0.7), 'trash', 3.5, 2.8, 1.6, {
     lid: true,
@@ -326,6 +361,9 @@ export function createLane(): Lane {
   anchors.trash.position.set(BIN_X, 2.4, BIN_Z.trash);
   anchors.unsure.position.set(BIN_X, 1.4, BIN_Z.unsure);
   group.add(anchors.recyclable, anchors.trash, anchors.unsure);
+
+  // Without sorting there is no belt, gate or bin to see: only the items, which are added below.
+  if (!options.sorting) for (const part of group.children) part.visible = false;
 
   // -- the items ----------------------------------------------------------------------------
   const canProfile = [
@@ -454,43 +492,66 @@ export function createLane(): Lane {
   const scaleOf: Record<Kind, number> = { can: 1.3, foil: 1.25, phone: 1.25, unsure: 1.4 };
 
   const beltPoint = new Vector3();
-  const orbit = new Vector3();
+  const feedPoint = new Vector3();
   const stage = new Vector3();
 
   return {
     group,
     anchors,
-    update({ time, chapter, motion, palette }) {
-      const t = motion ? time : 0;
+    update({ time, chapter, explode, palette }) {
+      const t = time;
       beltMaterial.color.copy(palette.stone).multiplyScalar(0.2);
       // Dim enough by day that these thin lines do not bloom over the belt between them.
       railMaterial.color.copy(palette.glow).multiplyScalar(palette.glowIntensity * 0.42);
       glowMaterial.color.copy(palette.glow).multiplyScalar(palette.glowIntensity * 0.5);
       (sheetMaterial.uniforms.uColor!.value as Color).copy(palette.glow);
 
-      const toLane = smoothstep(2.75, 3.4, chapter);
-      const run = clamp01((chapter - SORT_START) / SORT_SPAN);
+      // In the opening chapters the items go into the Sorter; later they wait for the belt.
+      const feeding = options.sorting ? 1 - smoothstep(2.55, 3.3, chapter) : 1;
+      const run = options.sorting ? clamp01((chapter - SORT_START) / SORT_SPAN) : 0;
+      const inlet = mouth(explode);
       let pulse = 0;
+      let drop = 0;
+      const open: Record<Outcome, number> = { recyclable: 0, trash: 0, unsure: 0 };
       const arrive: Record<Outcome, number> = { recyclable: 0, trash: 0, unsure: 0 };
 
       for (const item of items) {
         const mesh = meshes[item.kind];
         const k = scaleOf[item.kind];
 
-        // Drifting around the Sorter, then waiting in a loose cloud above the start of the belt.
-        const angle = item.phase * Math.PI * 2 + t * item.speed;
-        // A wide, flat ring round the Sorter: on the camera's side it stays well back, so an
-        // item never fills the picture.
-        const radiusX = 9.5 + (item.slot % 5) * 1 + (item.kind === 'can' ? 0.8 : 0);
-        const radiusZ = 4.8 + (item.slot % 3) * 0.7;
-        orbit.set(
-          Math.cos(angle) * radiusX,
-          1.7 + ((item.phase * 3.1) % 1) * 3.8 + Math.sin(t * 0.6 + item.phase * 9) * 0.3,
-          Math.sin(angle) * radiusZ,
-        );
+        // Setting off from outside, over the rim, under the tipped-up part of the lid and down into
+        // the glow, one after another; and, once the belt is wanted, waiting in a loose cloud
+        // above the start of it.
         stage.copy(item.staging);
         stage.y += Math.sin(t * 0.7 + item.phase * 13) * 0.22;
-        const waiting = orbit.lerp(stage, toLane);
+        let feedScale = 1;
+        if (feeding > 0) {
+          const cycle = (((t / FEED_PERIOD + item.phase) % 1) + 1) % 1;
+          const f = cycle / FEED_FLIGHT;
+          const target = LID_AZIMUTH[item.outcome];
+          if (f < 1) {
+            const az = mix(target + (item.phase * 2 - 1) * 0.6, target, smoothstep(0.1, 0.85, f));
+            const radius = bezier(15 + (item.slot % 4) * 1.2, inlet.rim + 0.2, 1, f);
+            const height = bezier(
+              inlet.over + 1.2 + ((item.phase * 7) % 1) * 2.6,
+              inlet.over,
+              inlet.floor,
+              f,
+            );
+            feedPoint.set(Math.cos(az) * radius, height, Math.sin(az) * radius);
+            feedScale = smoothstep(0, 0.12, f) * (1 - smoothstep(0.9, 1, f));
+            open[item.outcome] = Math.max(
+              open[item.outcome],
+              smoothstep(0.28, 0.5, f) * (1 - smoothstep(0.88, 1, f)) * feeding,
+            );
+            drop = Math.max(drop, Math.exp(-(((f - 0.93) / 0.045) ** 2)) * feeding);
+          } else {
+            // Taken in: waiting inside, out of sight, for the next turn.
+            feedPoint.set(Math.cos(target), inlet.floor, Math.sin(target));
+            feedScale = 0;
+          }
+        }
+        const waiting = options.sorting ? stage.lerp(feedPoint, feeding) : feedPoint;
 
         const start = (item.rank / (items.length - 1)) * (1 - TRANSIT);
         const u = clamp01((run - start) / TRANSIT);
@@ -554,7 +615,7 @@ export function createLane(): Lane {
 
         dummy.position.set(x, y, z);
         dummy.rotation.set(pitch, yaw, roll);
-        dummy.scale.setScalar(k);
+        dummy.scale.setScalar(Math.max(0.0001, k * mix(1, feedScale, feeding)));
         dummy.updateMatrix();
         mesh.setMatrixAt(item.slot, dummy.matrix);
       }
@@ -578,7 +639,7 @@ export function createLane(): Lane {
       recyclableBin.rim.color.copy(OUTCOME.recyclable).multiplyScalar(lipBoost('recyclable'));
       trashBin.rim.color.copy(OUTCOME.trash).multiplyScalar(lipBoost('trash') * 0.9);
       unsureTray.rim.color.copy(OUTCOME.unsure).multiplyScalar(lipBoost('unsure'));
-      return pulse;
+      return { pulse, open, drop };
     },
     dispose() {
       belt.geometry.dispose();
