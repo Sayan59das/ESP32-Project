@@ -5,12 +5,22 @@
 //    reduced motion (or the pause button) it draws on demand, once per change, and shows
 //    the chapter nearest to where the reader is instead of flying the camera.
 //  - It picks a quality tier for the machine (bloom and shadows only where they are
-//    affordable), watches its own frame time, and steps down when it cannot keep up.
+//    affordable), watches its own frame time, and when it cannot keep up it first draws
+//    fewer pixels, a little at a time, and only then gives up bloom and shadows.
+//  - It compiles every shader and uploads every generated texture before the first frame, so
+//    nothing stalls the picture the first time a chapter's objects come into view.
+//  - The story's position is a critically damped spring: a wheel's steps, a dragged scrollbar
+//    and a jump from the chapter dots all come out as one continuous camera move.
 //  - Everything is generated here: no image, model or font is downloaded.
 
 import {
   ACESFilmicToneMapping,
+  CanvasTexture,
+  DataTexture,
   HalfFloatType,
+  type Material,
+  type Mesh,
+  type Texture,
   PCFSoftShadowMap,
   PMREMGenerator,
   SRGBColorSpace,
@@ -27,7 +37,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 
 import { chapterPosition, currentChapter, type Span } from '@/lib/scene/chapters';
 import { type Box, chooseLean, labelBox } from '@/lib/scene/labels';
-import { clamp01, damp, window01 } from '@/lib/scene/math';
+import { clamp01, damp, type Spring, smoothDamp, window01 } from '@/lib/scene/math';
 
 import type { BuildContext, FrameState, Quality, SceneModule, StageHandle } from './types';
 
@@ -51,8 +61,15 @@ export interface StageOptions {
 }
 
 const INTRO_SECONDS = 3.6;
-/** A frame slower than this, 30 per second, counts against the quality tier. */
-const SLOW_FRAME = 1 / 30;
+/** A frame slower than this, about 45 per second, counts against the picture's resolution. */
+const SLOW_FRAME = 1 / 45;
+/** The least share of its pixels the picture is drawn with before a quality tier is given up. */
+const LOWEST_SCALE = 0.62;
+/** How long the camera takes to settle on where the reader is, and its top speed. */
+const SETTLE_SECONDS = 0.5;
+const TOP_SPEED = 2.4;
+/** The longest the first compile may hold the picture back before it is drawn anyway. */
+const WARM_LIMIT_MS = 5000;
 
 function softwareRenderer(gl: WebGLRenderingContext | WebGL2RenderingContext): boolean {
   const info = gl.getExtension('WEBGL_debug_renderer_info');
@@ -87,6 +104,8 @@ interface Tag {
   /** Size of the text box, measured the first time the label shows. */
   width: number;
   height: number;
+  /** Whether the label is on the page now, so a hidden one is not written to every frame. */
+  shown: boolean;
 }
 
 export function createStage(options: StageOptions): StageHandle | null {
@@ -130,13 +149,16 @@ export function createStage(options: StageOptions): StageHandle | null {
   let composer: EffectComposer | null = null;
   let bloomPass: UnrealBloomPass | null = null;
 
+  /** Share of the full resolution in use. It only ever goes down, a step at a time. */
+  let scale = 1;
+
   function chooseRatio(): number {
     const device = window.devicePixelRatio || 1;
     if (software) return 0.6;
     const cap = quality === 'high' ? 2 : quality === 'medium' ? 1.5 : 1;
     // A 4K screen at ratio 2 is far more pixels than the scene needs.
     const budget = quality === 'high' ? 3.2e6 : 1.8e6;
-    return Math.min(device, cap, Math.sqrt(budget / Math.max(1, width * height)));
+    return scale * Math.min(device, cap, Math.sqrt(budget / Math.max(1, width * height)));
   }
 
   function buildComposer() {
@@ -144,9 +166,10 @@ export function createStage(options: StageOptions): StageHandle | null {
     composer = null;
     bloomPass = null;
     if (quality === 'low') return;
+    // Fewer samples when there are already many pixels: the edges are fine at that density.
     const target = new WebGLRenderTarget(width * pixelRatio, height * pixelRatio, {
       type: HalfFloatType,
-      samples: quality === 'high' ? 4 : 0,
+      samples: quality === 'high' ? (pixelRatio >= 1.4 ? 2 : 4) : 0,
     });
     composer = new EffectComposer(renderer, target);
     composer.addPass(new RenderPass(mod.scene, mod.camera));
@@ -249,6 +272,7 @@ export function createStage(options: StageOptions): StageHandle | null {
       leanY: side.endsWith('down') ? -1 : 1,
       width: 0,
       height: 0,
+      shown: true,
     });
   });
   const projected = new Vector3();
@@ -263,7 +287,16 @@ export function createStage(options: StageOptions): StageHandle | null {
     view.right = width - 10;
     view.bottom = height - 10;
     avoid.length = 0;
-    if (tags.length > 0) {
+    // Reading where the words are forces the page to lay itself out, so it is only done on a
+    // frame where some label is going to be drawn.
+    let showing = false;
+    for (const tag of tags) {
+      if (window01(chapter, tag.from, tag.to, 0.28) >= 0.02) {
+        showing = true;
+        break;
+      }
+    }
+    if (showing) {
       document.querySelectorAll<HTMLElement>('[data-avoid]').forEach((el) => {
         const box = el.getBoundingClientRect();
         if (box.width > 0 && box.bottom > 0 && box.top < height) avoid.push(box);
@@ -273,13 +306,17 @@ export function createStage(options: StageOptions): StageHandle | null {
       const target = mod.anchors.get(tag.anchor);
       const show = window01(chapter, tag.from, tag.to, 0.28);
       if (!target || show < 0.02) {
-        tag.el.style.opacity = '0';
-        tag.el.style.visibility = 'hidden';
+        if (tag.shown) {
+          tag.el.style.opacity = '0';
+          tag.el.style.visibility = 'hidden';
+          tag.shown = false;
+        }
         continue;
       }
       target.getWorldPosition(projected).project(mod.camera);
       if (projected.z > 1) {
         tag.el.style.visibility = 'hidden';
+        tag.shown = false;
         continue;
       }
       // The picture may be shifted sideways to leave room for text: move the labels with it.
@@ -296,6 +333,7 @@ export function createStage(options: StageOptions): StageHandle | null {
       if (lean === null) {
         tag.el.style.opacity = '0';
         tag.el.style.visibility = 'hidden';
+        tag.shown = false;
         continue;
       }
       // A label that is clearly showing keeps its place from the labels after it.
@@ -304,6 +342,7 @@ export function createStage(options: StageOptions): StageHandle | null {
       if (tag.el.dataset.side !== side) tag.el.dataset.side = side;
 
       tag.el.style.visibility = 'visible';
+      tag.shown = true;
       tag.el.style.opacity = String(show);
       tag.el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
     }
@@ -316,11 +355,14 @@ export function createStage(options: StageOptions): StageHandle | null {
   let last = performance.now();
   let animTime = options.time ?? 0;
   let chapter = options.frame ?? 0;
+  const spring: Spring = { value: chapter, velocity: 0 };
+  /** False until every shader is compiled and every generated texture is on the GPU. */
+  let warm = false;
   let intro = motion ? 0 : 1;
   let introChecked = false;
   let shiftApplied = Number.NaN;
   let slowFrames = 0;
-  let warm = 0;
+  let framesSeen = 0;
   let renderedChapter = Number.NaN;
 
   const state: FrameState = {
@@ -333,6 +375,7 @@ export function createStage(options: StageOptions): StageHandle | null {
     quality,
     intro,
     aspect: 1,
+    speed: 0,
   };
 
   function applyView() {
@@ -367,7 +410,7 @@ export function createStage(options: StageOptions): StageHandle | null {
     const seen = !document.hidden;
     const elapsed = Math.min(0.1, (now - last) / 1000);
     last = now;
-    if (!seen) return;
+    if (!seen || !warm) return;
     // A solid page that fills the screen (the full results) hides the world: draw nothing.
     if (covered()) return;
 
@@ -383,15 +426,31 @@ export function createStage(options: StageOptions): StageHandle | null {
 
     if (!introChecked && spans.length > 0) {
       introChecked = true;
-      // Arriving part-way down the page (a reload) skips the opening.
-      if (target > 0.6) animTime = Math.max(animTime, INTRO_SECONDS);
+      // Arriving part-way down the page (a reload) skips the opening, and starts the camera
+      // there instead of flying it in from the top.
+      if (target > 0.6) {
+        animTime = Math.max(animTime, INTRO_SECONDS);
+        spring.value = target;
+        spring.velocity = 0;
+      }
     }
     intro = motion || options.time != null ? clamp01(animTime / INTRO_SECONDS) : 1;
     if (options.time != null && options.time < INTRO_SECONDS)
       intro = clamp01(options.time / INTRO_SECONDS);
 
-    chapter =
-      options.frame != null ? options.frame : animate ? damp(chapter, wanted, 4.2, dt) : wanted;
+    if (options.frame != null) {
+      chapter = options.frame;
+      state.speed = 0;
+    } else if (animate) {
+      chapter = smoothDamp(spring, wanted, SETTLE_SECONDS, dt, TOP_SPEED);
+      state.speed = spring.velocity;
+    } else {
+      // Keep the spring where the picture is, so animation can pick up from here.
+      chapter = wanted;
+      spring.value = wanted;
+      spring.velocity = 0;
+      state.speed = 0;
+    }
     renderedChapter = wanted;
     dark = animate ? damp(dark, darkTarget, 3, dt) : darkTarget;
     pointer.x = animate ? damp(pointer.x, pointerTarget.x, 4, dt) : 0;
@@ -421,17 +480,24 @@ export function createStage(options: StageOptions): StageHandle | null {
 
     if (container.dataset.ready !== 'true') container.dataset.ready = 'true';
 
-    // Step the quality down when the machine cannot keep up. Never back up: no flapping.
+    // When the machine cannot keep up, draw fewer pixels first (a little at a time, which is
+    // hardly seen), and give up bloom and shadows only when that is not enough. Never back up:
+    // no flapping.
     if (animate && options.quality == null) {
-      warm++;
-      if (warm > 40) {
+      framesSeen++;
+      if (framesSeen > 40) {
         slowFrames =
-          elapsed > SLOW_FRAME || performance.now() - started > 24
+          elapsed > SLOW_FRAME || performance.now() - started > 20
             ? slowFrames + 1
             : Math.max(0, slowFrames - 2);
-        if (slowFrames > 75 && quality !== 'low') {
+        if (slowFrames > 45) {
           slowFrames = 0;
-          applyQuality(quality === 'high' ? 'medium' : 'low');
+          if (!software && scale > LOWEST_SCALE) {
+            scale = Math.max(LOWEST_SCALE, scale * 0.85);
+            resize();
+          } else if (quality !== 'low') {
+            applyQuality(quality === 'high' ? 'medium' : 'low');
+          }
         }
       }
     }
@@ -452,6 +518,41 @@ export function createStage(options: StageOptions): StageHandle | null {
   applyQuality(quality);
   raf = requestAnimationFrame(frame);
 
+  // Compile every shader and upload every generated texture now, with the page still saying
+  // "loading", so nothing stalls the picture when a chapter's objects first come into view.
+  const uploadTextures = () => {
+    const seen = new Set<Texture>();
+    mod.scene.traverse((object) => {
+      const material = (object as Mesh).material as Material | Material[] | undefined;
+      for (const m of Array.isArray(material) ? material : material ? [material] : []) {
+        for (const value of Object.values(m)) {
+          if (
+            (value instanceof DataTexture || value instanceof CanvasTexture) &&
+            !seen.has(value)
+          ) {
+            seen.add(value);
+            renderer.initTexture(value);
+          }
+        }
+      }
+    });
+  };
+  const begin = () => {
+    if (warm || disposed) return;
+    warm = true;
+    last = performance.now();
+    invalidate();
+  };
+  const timeout = window.setTimeout(begin, WARM_LIMIT_MS);
+  void renderer
+    .compileAsync(mod.scene, mod.camera)
+    .then(uploadTextures)
+    .catch(() => undefined)
+    .finally(() => {
+      window.clearTimeout(timeout);
+      begin();
+    });
+
   return {
     get motion() {
       return motion;
@@ -465,6 +566,7 @@ export function createStage(options: StageOptions): StageHandle | null {
     dispose() {
       disposed = true;
       cancelAnimationFrame(raf);
+      window.clearTimeout(timeout);
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('pointermove', onPointer);
       canvas.removeEventListener('webglcontextlost', onLost);

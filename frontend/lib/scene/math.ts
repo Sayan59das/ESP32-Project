@@ -45,6 +45,45 @@ export function damp(current: number, target: number, rate: number, dt: number):
   return mix(current, target, 1 - Math.exp(-rate * dt));
 }
 
+/** A value that is being pulled toward a goal, and how fast it is moving. */
+export interface Spring {
+  value: number;
+  velocity: number;
+}
+
+/**
+ * A critically damped spring: moves `spring.value` toward `target`, taking about `smoothTime`
+ * seconds, without overshooting it. Unlike `damp` it keeps its velocity from one frame to the
+ * next, so it eases in as well as out and a jerky input (a mouse wheel's steps) comes out as one
+ * continuous motion. `maxSpeed` caps how fast it travels, so a long jump is a flight and not a
+ * lurch. It is the exact solution of the spring, so it is the same at any frame rate.
+ */
+export function smoothDamp(
+  spring: Spring,
+  target: number,
+  smoothTime: number,
+  dt: number,
+  maxSpeed = Number.POSITIVE_INFINITY,
+): number {
+  if (dt <= 0) return spring.value;
+  const time = Math.max(1e-4, smoothTime);
+  const omega = 2 / time;
+  const limit = maxSpeed * time;
+  const before = spring.value;
+  const offset = Math.max(-limit, Math.min(limit, before - target));
+  const goal = before - offset;
+  const push = spring.velocity + omega * offset;
+  const decay = Math.exp(-omega * dt);
+  spring.velocity = (spring.velocity - omega * push * dt) * decay;
+  spring.value = goal + (offset + push * dt) * decay;
+  // Arriving, not passing through.
+  if (target - before > 0 === spring.value > target) {
+    spring.value = target;
+    spring.velocity = 0;
+  }
+  return spring.value;
+}
+
 /** An element of an array that is known to be there. */
 export function at<T>(items: readonly T[], index: number): T {
   const item = items[index];

@@ -10,6 +10,7 @@ import {
   mulberry32,
   noise2,
   smootherstep,
+  smoothDamp,
   smoothstep,
   window01,
 } from './math';
@@ -44,6 +45,63 @@ describe('easing', () => {
     for (let i = 0; i < 30; i++) b = damp(b, 1, 4, 1 / 30);
     expect(a).toBeLessThan(1);
     expect(a).toBeCloseTo(b, 6);
+  });
+});
+
+describe('the critically damped spring', () => {
+  it('arrives without passing the target, and eases in from rest', () => {
+    const spring = { value: 0, velocity: 0 };
+    const speeds: number[] = [];
+    for (let i = 0; i < 240; i++) {
+      smoothDamp(spring, 1, 0.4, 1 / 60);
+      speeds.push(spring.velocity);
+      expect(spring.value).toBeLessThanOrEqual(1);
+    }
+    expect(spring.value).toBeCloseTo(1, 4);
+    // It does not lurch: the first frame is slower than the tenth, unlike exponential damping.
+    expect(speeds[0]!).toBeLessThan(speeds[9]!);
+  });
+
+  it('comes to the same place at any frame rate', () => {
+    const a = { value: 0, velocity: 0 };
+    for (let i = 0; i < 30; i++) smoothDamp(a, 1, 0.5, 1 / 60);
+    const b = { value: 0, velocity: 0 };
+    for (let i = 0; i < 15; i++) smoothDamp(b, 1, 0.5, 1 / 30);
+    expect(a.value).toBeCloseTo(b.value, 6);
+    expect(a.velocity).toBeCloseTo(b.velocity, 6);
+  });
+
+  it('keeps its velocity when the goal moves, so a stepped input is one smooth motion', () => {
+    const spring = { value: 0, velocity: 0 };
+    let previous = 0;
+    let biggestJump = 0;
+    for (let i = 0; i < 120; i++) {
+      // A mouse wheel: the goal jumps in steps.
+      smoothDamp(spring, Math.floor(i / 20) * 0.3, 0.4, 1 / 60);
+      biggestJump = Math.max(biggestJump, Math.abs(spring.velocity - previous));
+      previous = spring.velocity;
+    }
+    // The velocity changes a little each frame. Exponential damping would change it by
+    // a whole step's worth, about 1.2, in the first frame after every step.
+    expect(biggestJump).toBeLessThan(0.15);
+  });
+
+  it('flies a long way at no more than the speed it was given', () => {
+    const spring = { value: 0, velocity: 0 };
+    let fastest = 0;
+    for (let i = 0; i < 600; i++) {
+      const before = spring.value;
+      smoothDamp(spring, 20, 0.4, 1 / 60, 3);
+      fastest = Math.max(fastest, (spring.value - before) * 60);
+    }
+    expect(fastest).toBeLessThanOrEqual(3 * 1.02);
+    expect(fastest).toBeGreaterThan(2);
+    expect(spring.value).toBeCloseTo(20, 3);
+  });
+
+  it('stays put when there is no time', () => {
+    const spring = { value: 2, velocity: 1 };
+    expect(smoothDamp(spring, 5, 0.4, 0)).toBe(2);
   });
 });
 

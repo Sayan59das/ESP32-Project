@@ -20,6 +20,8 @@ export interface FrameState {
   /** The opening assembly, 0 to 1. Always 1 while motion is off. */
   intro: number;
   aspect: number;
+  /** How fast the story is travelling, in chapters per second. 0 while motion is off. */
+  speed: number;
 }
 
 /** What the engine gives a scene when it builds it. */
