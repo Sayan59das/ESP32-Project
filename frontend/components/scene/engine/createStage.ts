@@ -74,8 +74,8 @@ const BLOOM_SCALE = 0.5;
 /** The least share of its pixels the picture is drawn with before a quality tier is given up. */
 const LOWEST_SCALE = 0.62;
 /** How long the camera takes to settle on where the reader is, and its top speed. */
-const SETTLE_SECONDS = 0.5;
-const TOP_SPEED = 2.4;
+const SETTLE_SECONDS = 0.32;
+const TOP_SPEED = 3.6;
 /** The longest the first compile may hold the picture back before it is drawn anyway. */
 const WARM_LIMIT_MS = 5000;
 
@@ -216,6 +216,11 @@ export function createStage(options: StageOptions): StageHandle | null {
       composer.addPass(edgePass);
     }
     sizeComposer();
+  }
+
+  /** The off-screen buffer the picture is drawn into, or null when it goes straight to the screen. */
+  function drawTarget(): WebGLRenderTarget | null {
+    return composer ? composer.readBuffer : null;
   }
 
   function sizeComposer() {
@@ -598,8 +603,14 @@ export function createStage(options: StageOptions): StageHandle | null {
     invalidate();
   };
   const timeout = window.setTimeout(begin, WARM_LIMIT_MS);
-  void renderer
-    .compileAsync(mod.scene, mod.camera)
+  // A shader is built for where it draws: the tone mapping and the colour space differ between
+  // the screen and the off-screen buffer the bloom works on. Compile against the one in use, or
+  // every object is compiled again the first time it is drawn, a hitch each time a chapter's
+  // objects come into view. The compile starts at once; only waiting for it is asynchronous.
+  renderer.setRenderTarget(drawTarget());
+  const compiling = renderer.compileAsync(mod.scene, mod.camera);
+  renderer.setRenderTarget(null);
+  void compiling
     .then(uploadTextures)
     .catch(() => undefined)
     .finally(() => {
