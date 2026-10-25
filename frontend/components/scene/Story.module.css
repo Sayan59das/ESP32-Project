@@ -202,7 +202,7 @@
   gap: var(--space-3);
   width: min(46rem, 100%);
   margin-right: auto;
-  /* A soft halo of the ground colour keeps the letters clear if a brick drifts behind them. */
+  /* A soft halo of the ground colour keeps the letters clear if a scrap of paper drifts behind them. */
   text-shadow:
     0 0 36px var(--ground),
     0 0 14px var(--ground);

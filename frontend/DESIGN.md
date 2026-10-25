@@ -143,13 +143,19 @@ read the same with the canvas off. The rules above still hold: the numbers on `/
 from `data/testing.json` and say "Not measured yet" or "Not added yet" when they are missing;
 simulated data is never shown as real; the three outcomes keep their colours and icons.
 
-- **The world.** One scene per page (`components/scene/scenes/`), made in code: a mist, a
-  plateau of hills, the Sorter (a tower of bricks around a lens), a lane and bins, a pipeline of
-  glass blocks, towers of light, screens, a field of photograph tiles, empty frames. Light and
-  dark are two palettes of the same world (`engine/palette.ts`); the outcome colours do not change.
+- **The world.** One scene per page (`components/scene/scenes/`), made in code: a concrete
+  recycling yard under a haze (slab joints, safety paint, crates, drums, flattened cans, bales,
+  and the silos and sheds of a plant fading into the distance), the Sorter (a ribbed bin with a
+  lens, a recycling mark and a lid in the three outcome colours), a lane and three bins that
+  carry their outcome's mark, a pipeline of glass blocks, towers of light, screens, a field of
+  photograph tiles, empty frames. Scraps of paper drift through the air. Light and dark are two
+  palettes of the same world (`engine/palette.ts`); the outcome colours do not change.
 - **The camera** follows a spline through poses keyed to chapters (`lib/scene/rig.ts`), resting
-  while a chapter's card is pinned and moving between chapters. On a narrow screen the picture
-  moves into the top half and the words sit below.
+  while a chapter's card is pinned and moving between chapters. The reader's position drives it
+  through a critically damped spring (`smoothDamp` in `lib/scene/math.ts`), so a wheel's steps,
+  a dragged scrollbar and a jump from the chapter dots are all one continuous move; the field of
+  view opens a little at speed. On a narrow screen the picture moves into the top half and the
+  words sit below.
 - **Labels** pinned to points in the world are decoration that repeats the text. Each leans to a
   side that is on screen and clear of the cards and of the other labels, or hides
   (`lib/scene/labels.ts`).
@@ -157,7 +163,9 @@ simulated data is never shown as real; the three outcomes keep their colours and
   remembers the choice. Still mode renders on demand only. `?frame=2.5&time=10&quality=low`
   freezes a chapter for review and tests.
 - **Cost.** Three quality tiers (bloom and shadows only on the top one), a software renderer is
-  forced to the lowest, and it steps down if frames run slow, never back up. Only the home and
-  testing pages load three.js.
+  forced to the lowest. If frames run slow it draws fewer pixels first, a step at a time, and
+  only then gives up bloom and shadows; it never steps back up. Every shader is compiled and
+  every generated texture uploaded before the first frame, so nothing stalls when a chapter's
+  objects first come into view. Only the home and testing pages load three.js.
 - **Contrast.** Small text straight on the world is `--ink` only, checked against the world's
   mist and ground colours (`--scene-mist`, `--scene-ground`, kept in step with the palette).

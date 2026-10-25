@@ -1,4 +1,5 @@
-// The sorting lane: a belt, a scan gate, and three places an item can end up. The items are the
+// The sorting lane: a belt, a scan gate, and three places an item can end up, two bins with their
+// lids thrown back and a low tray, each marked with its outcome's sign. The items are the
 // kinds in the project's own training photos (cans, foil packets, phone cases), made in code.
 //
 // This is an illustration of the process. Every position is a function of where the reader is in
@@ -6,7 +7,9 @@
 
 import {
   BoxGeometry,
+  CanvasTexture,
   Color,
+  CylinderGeometry,
   DoubleSide,
   Group,
   InstancedMesh,
@@ -22,11 +25,13 @@ import {
   Vector2,
   Vector3,
   AdditiveBlending,
+  type BufferGeometry,
 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 import { at, clamp01, fbm2, mix, mulberry32, smoothstep } from '@/lib/scene/math';
 
+import { type Glyph, glyphTexture } from '../engine/glyphs';
 import type { Palette } from '../engine/palette';
 import { OUTCOME } from '../engine/palette';
 import { grainNormalMap } from '../engine/textures';
@@ -96,59 +101,130 @@ export interface Lane {
   dispose(): void;
 }
 
-function bin(color: Color, width: number, depth: number, height: number) {
+/**
+ * A bin that widens toward its open top, on two wheels at the back, with its lid thrown back
+ * (the lids open away from the belt, so the lane stays in view) and its sign on the face that
+ * looks at the belt. Its footprint is square: `top` and `base` are the widths at the rim and
+ * at the floor.
+ */
+function bin(
+  color: Color,
+  glyph: Glyph,
+  top: number,
+  base: number,
+  height: number,
+  options: { lid: boolean; wheels: boolean },
+) {
   const group = new Group();
+  const geometries: BufferGeometry[] = [];
+  const textures: CanvasTexture[] = [];
   const wall = new MeshStandardMaterial({
     color,
-    roughness: 0.42,
-    metalness: 0.25,
-    envMapIntensity: 1.3,
+    roughness: 0.5,
+    metalness: 0.05,
+    envMapIntensity: 1.2,
     emissive: color,
-    emissiveIntensity: 0.12,
+    emissiveIntensity: 0.1,
+    side: DoubleSide,
   });
   const rimMaterial = new MeshBasicMaterial({
     color: color.clone().multiplyScalar(1.6),
     toneMapped: false,
   });
-  const t = 0.14;
-  const parts: [number, number, number, number, number, number][] = [
-    [0, t / 2, 0, width, t, depth], // floor
-    [0, height / 2, -depth / 2 + t / 2, width, height, t],
-    [0, height / 2, depth / 2 - t / 2, width, height, t],
-    [-width / 2 + t / 2, height / 2, 0, t, height, depth - 2 * t],
-    [width / 2 - t / 2, height / 2, 0, t, height, depth - 2 * t],
-  ];
-  const geometries: BoxGeometry[] = [];
-  for (const [x, y, z, w, h, d] of parts) {
-    const g = new BoxGeometry(w, h, d);
-    geometries.push(g);
-    const mesh = new Mesh(g, wall);
-    mesh.position.set(x, y, z);
+  const dark = new MeshStandardMaterial({ color: 0x1a1f1d, roughness: 0.8, metalness: 0.1 });
+  const add = (geometry: BufferGeometry, material: MeshStandardMaterial | MeshBasicMaterial) => {
+    geometries.push(geometry);
+    const mesh = new Mesh(geometry, material);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     group.add(mesh);
-  }
+    return mesh;
+  };
+
+  // The walls: a square frustum.
+  const frustum = new CylinderGeometry(top / Math.SQRT2, base / Math.SQRT2, height, 4, 1, true);
+  frustum.rotateY(Math.PI / 4);
+  add(frustum, wall).position.y = height / 2;
+  add(new BoxGeometry(base - 0.06, 0.14, base - 0.06), wall).position.y = 0.07;
+
   // A glowing lip round the top edge.
+  const lipY = height + 0.02;
   const lips: [number, number, number, number, number, number][] = [
-    [0, height + 0.02, -depth / 2 + t / 2, width + 0.02, 0.05, t + 0.02],
-    [0, height + 0.02, depth / 2 - t / 2, width + 0.02, 0.05, t + 0.02],
-    [-width / 2 + t / 2, height + 0.02, 0, t + 0.02, 0.05, depth - 2 * t],
-    [width / 2 - t / 2, height + 0.02, 0, t + 0.02, 0.05, depth - 2 * t],
+    [0, lipY, -top / 2 + 0.07, top + 0.04, 0.06, 0.16],
+    [0, lipY, top / 2 - 0.07, top + 0.04, 0.06, 0.16],
+    [-top / 2 + 0.07, lipY, 0, 0.16, 0.06, top - 0.2],
+    [top / 2 - 0.07, lipY, 0, 0.16, 0.06, top - 0.2],
   ];
   for (const [x, y, z, w, h, d] of lips) {
-    const g = new BoxGeometry(w, h, d);
-    geometries.push(g);
-    const lip = new Mesh(g, rimMaterial);
+    const lip = add(new BoxGeometry(w, h, d), rimMaterial);
     lip.position.set(x, y, z);
-    group.add(lip);
+    lip.castShadow = false;
   }
+
+  if (options.lid) {
+    // The lid, hinged on the far edge and thrown back.
+    const hinge = new Group();
+    hinge.position.set(top / 2 + 0.03, height + 0.07, 0);
+    hinge.rotation.z = (-104 * Math.PI) / 180;
+    group.add(hinge);
+    const slab = new RoundedBoxGeometry(top + 0.12, 0.13, top + 0.04, 2, 0.05);
+    geometries.push(slab);
+    const lid = new Mesh(slab, wall);
+    lid.position.x = -(top + 0.12) / 2;
+    lid.castShadow = true;
+    hinge.add(lid);
+    const handle = new BoxGeometry(0.5, 0.1, 0.12);
+    geometries.push(handle);
+    const grip = new Mesh(handle, dark);
+    grip.position.set(-(top + 0.12) + 0.3, 0.1, 0);
+    hinge.add(grip);
+  }
+  if (options.wheels) {
+    const wheel = new CylinderGeometry(0.38, 0.38, 0.22, 20);
+    wheel.rotateX(Math.PI / 2);
+    geometries.push(wheel);
+    for (const z of [-1, 1]) {
+      const w = new Mesh(wheel, dark);
+      w.position.set(base / 2 + 0.2, 0.38, z * (base / 2 - 0.35));
+      w.castShadow = true;
+      group.add(w);
+    }
+  }
+
+  // Its sign, on the face that looks at the belt. That face leans outward with the wall, so
+  // the sign leans with it.
+  const lean = Math.atan((top - base) / 2 / height);
+  const level = height * 0.58;
+  const wallX = base / 2 + ((top - base) / 2) * (level / height) + 0.025;
+  const texture = glyphTexture(glyph, 256);
+  textures.push(texture);
+  const signMaterial = new MeshBasicMaterial({
+    map: texture,
+    transparent: true,
+    toneMapped: false,
+    depthWrite: false,
+    color: new Color(0.92, 0.92, 0.92),
+  });
+  const signSize = Math.min(1.25, height * 0.8);
+  const sign = new Mesh(new PlaneGeometry(signSize, signSize), signMaterial);
+  geometries.push(sign.geometry);
+  sign.rotation.y = -Math.PI / 2;
+  const tilt = new Group();
+  tilt.position.set(-wallX, level, 0);
+  tilt.rotation.z = lean;
+  tilt.add(sign);
+  group.add(tilt);
+
   return {
     group,
     rim: rimMaterial,
     dispose() {
       for (const g of geometries) g.dispose();
+      for (const t of textures) t.dispose();
       wall.dispose();
       rimMaterial.dispose();
+      dark.dispose();
+      signMaterial.dispose();
     },
   };
 }
@@ -224,11 +300,20 @@ export function createLane(): Lane {
   group.add(gateAnchor);
 
   // -- the three places an item can end up --------------------------------------------------
-  const recyclableBin = bin(OUTCOME.recyclable.clone().multiplyScalar(0.55), 3.2, 3.2, 1.6);
+  const recyclableBin = bin(OUTCOME.recyclable.clone().multiplyScalar(0.62), 'recyclable', 3.5, 2.8, 1.6, {
+    lid: true,
+    wheels: true,
+  });
   recyclableBin.group.position.set(BIN_X, 0, BIN_Z.recyclable);
-  const trashBin = bin(OUTCOME.trash.clone().multiplyScalar(0.65), 3.2, 3.2, 1.6);
+  const trashBin = bin(OUTCOME.trash.clone().multiplyScalar(0.7), 'trash', 3.5, 2.8, 1.6, {
+    lid: true,
+    wheels: true,
+  });
   trashBin.group.position.set(BIN_X, 0, BIN_Z.trash);
-  const unsureTray = bin(OUTCOME.unsure.clone().multiplyScalar(0.7), 2.8, 2.8, 0.55);
+  const unsureTray = bin(OUTCOME.unsure.clone().multiplyScalar(0.75), 'unsure', 2.9, 2.6, 0.55, {
+    lid: false,
+    wheels: false,
+  });
   unsureTray.group.position.set(BIN_X, 0, BIN_Z.unsure);
   group.add(recyclableBin.group, trashBin.group, unsureTray.group);
   const anchors = {

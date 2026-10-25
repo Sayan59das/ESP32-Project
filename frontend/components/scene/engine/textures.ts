@@ -1,5 +1,5 @@
-// Textures made in code, so the 3D world needs no downloads. A tiling grain gives the bricks
-// and the ground a surface; the real camera frames are the only image files, and they are the
+// Textures made in code, so the 3D world needs no downloads. A tiling grain gives the moulded
+// plastic and the concrete a surface; the real camera frames are the only image files, and they are the
 // project's own training photos, served from this site.
 
 import {

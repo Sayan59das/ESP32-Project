@@ -1,5 +1,6 @@
-// The colours of the 3D world in each theme, blended by the theme switch. Light is a pale
-// morning mist; dark is a night where the seams of the machine glow and bloom.
+// The colours of the 3D world in each theme, blended by the theme switch. Light is a recycling
+// yard on a hazy morning, pale concrete under a pale sky; dark is the same yard at night, where
+// the seams of the machine glow and bloom.
 
 import { Color } from 'three';
 
@@ -10,6 +11,10 @@ export interface Palette {
   fogDensity: number;
   ground: Color;
   stone: Color;
+  /** The moulded plastic of the bins. */
+  body: Color;
+  /** Safety paint on the ground. */
+  paint: Color;
   hemiSky: Color;
   hemiGround: Color;
   hemiIntensity: number;
@@ -29,8 +34,10 @@ const hex = (c: number): Color => new Color(c);
 const LIGHT = {
   fog: hex(0xd7e3de),
   fogDensity: 0.0105,
-  ground: hex(0xb6c9bf),
+  ground: hex(0xc3cbc6),
   stone: hex(0x9aaca4),
+  body: hex(0x3d4c46),
+  paint: hex(0xd9a91a),
   hemiSky: hex(0xf0fbf6),
   hemiGround: hex(0x7f948b),
   hemiIntensity: 0.55,
@@ -39,7 +46,7 @@ const LIGHT = {
   glow: hex(0x9ff0cb),
   glowIntensity: 1.7,
   dust: hex(0x9db3a9),
-  dustOpacity: 0.4,
+  dustOpacity: 0.2,
   envIntensity: 0.42,
   exposure: 0.88,
   bloomStrength: 0.26,
@@ -50,6 +57,8 @@ const DARK = {
   fogDensity: 0.0138,
   ground: hex(0x0f1c17),
   stone: hex(0x4f645b),
+  body: hex(0x566d64),
+  paint: hex(0x8a6c12),
   hemiSky: hex(0x5d7f8e),
   hemiGround: hex(0x08100d),
   hemiIntensity: 0.7,
@@ -58,7 +67,7 @@ const DARK = {
   glow: hex(0x5cf0b0),
   glowIntensity: 2.7,
   dust: hex(0xcdf5e4),
-  dustOpacity: 0.55,
+  dustOpacity: 0.3,
   envIntensity: 0.5,
   exposure: 1.1,
   bloomStrength: 0.62,
@@ -70,6 +79,8 @@ export function createPalette(): Palette {
     fogDensity: 0,
     ground: new Color(),
     stone: new Color(),
+    body: new Color(),
+    paint: new Color(),
     hemiSky: new Color(),
     hemiGround: new Color(),
     hemiIntensity: 0,
@@ -90,6 +101,8 @@ export function paletteAt(dark: number, out: Palette): Palette {
   out.fog.lerpColors(LIGHT.fog, DARK.fog, dark);
   out.ground.lerpColors(LIGHT.ground, DARK.ground, dark);
   out.stone.lerpColors(LIGHT.stone, DARK.stone, dark);
+  out.body.lerpColors(LIGHT.body, DARK.body, dark);
+  out.paint.lerpColors(LIGHT.paint, DARK.paint, dark);
   out.hemiSky.lerpColors(LIGHT.hemiSky, DARK.hemiSky, dark);
   out.hemiGround.lerpColors(LIGHT.hemiGround, DARK.hemiGround, dark);
   out.sun.lerpColors(LIGHT.sun, DARK.sun, dark);

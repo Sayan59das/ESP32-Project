@@ -55,7 +55,7 @@
   /* The 3D pages' world, where words sit straight on it (the opening of each). These are the
      fog and ground colours of components/scene/engine/palette.ts; keep them in step. */
   --scene-mist: #d7e3de;
-  --scene-ground: #b6c9bf;
+  --scene-ground: #c3cbc6;
   --on-video: #e9ece9;
   --on-video-muted: #a6aea9;
   --focus-on-video: #8fc1ec;

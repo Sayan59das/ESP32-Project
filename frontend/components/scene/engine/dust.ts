@@ -1,5 +1,5 @@
-// Drifting specks in the air: the sense of depth and weather in the scene. All the motion is in
-// the vertex shader, so this costs one draw call and no JavaScript per frame beyond a uniform.
+// Specks of dust in the air, small and faint: the sense of depth in a big shed. All the motion is
+// in the vertex shader, so this costs one draw call and no JavaScript per frame beyond a uniform.
 
 import {
   AdditiveBlending,
@@ -31,7 +31,7 @@ const VERTEX = /* glsl */ `
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
     float depth = max(-mv.z, 0.1);
-    gl_PointSize = clamp(uSize * (0.35 + aSeed.y) * (60.0 / depth), 1.0, 14.0);
+    gl_PointSize = clamp(uSize * (0.35 + aSeed.y) * (60.0 / depth), 1.0, 5.0);
     // Fade in from the camera and out towards the edge of the box.
     vFade = smoothstep(0.4, 4.0, depth) * (1.0 - smoothstep(0.35 * uBox.x, 0.5 * uBox.x, length(p.xz)));
   }
@@ -75,7 +75,7 @@ export function createDust(count: number, box: Vector3, seed = 7): Dust {
     fragmentShader: FRAGMENT,
     uniforms: {
       uTime: { value: 0 },
-      uSize: { value: 2.2 },
+      uSize: { value: 1.4 },
       uBox: { value: box.clone() },
       uWind: { value: new Vector3(0.35, 0, 0.1) },
       uColor: { value: new Color(0xffffff) },

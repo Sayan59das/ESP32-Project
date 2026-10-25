@@ -1,6 +1,6 @@
 // The testing story: the product in the middle, and around it a ring of places where it is tested.
 //
-//   0  Tested, and shown      the Sorter, with the ring of tests in the mist around it
+//   0  Tested, and shown      the Sorter, with the ring of tests in the yard around it
 //   1  What is checked        a tower for each set of automated checks
 //   2  When the camera goes   a screen for each way the camera can stop showing a picture
 //      dark
@@ -9,7 +9,7 @@
 //   5  Run it again           back to the product
 //
 // The sets stand on a circle, each facing the middle, and the camera travels inside the circle:
-// every chapter looks outward at one set, with the hills behind it.
+// every chapter looks outward at one set, with the yard and the plant behind it.
 
 import {
   DirectionalLight,
@@ -28,6 +28,7 @@ import { type Key, poseAt } from '@/lib/scene/rig';
 
 import { createDust } from '../engine/dust';
 import { createPalette, paletteAt } from '../engine/palette';
+import { createScraps } from '../engine/scraps';
 import type { BuildContext, FrameState, Quality, SceneModule } from '../engine/types';
 import { createField, type FieldSpec } from './field';
 import { createMedia, type MediaSpec } from './media';
@@ -153,7 +154,14 @@ export function buildTestingScene(context: BuildContext, data?: unknown): SceneM
 
   const sky = createSky();
   scene.add(sky.group);
-  const terrain = createTerrain(context.quality === 'low' ? 140 : 240);
+  // Nothing is left lying in a set's footprint or at the Sorter.
+  const keepClear = (x: number, z: number) =>
+    Math.hypot(x, z) < 6 ||
+    [PYLONS, STATIONS, FIELD, MEDIA].some((set) => {
+      const [px, , pz] = positionOf(set);
+      return Math.hypot(x - px, z - pz) < 24;
+    });
+  const terrain = createTerrain({ segments: context.quality === 'low' ? 48 : 96, keepClear });
   scene.add(terrain.group);
 
   // The product, in the middle of the ring.
@@ -204,8 +212,10 @@ export function buildTestingScene(context: BuildContext, data?: unknown): SceneM
   sun.shadow.normalBias = 0.04;
   scene.add(sun, sun.target);
 
-  const dust = createDust(2200, new Vector3(70, 36, 70));
+  const dust = createDust(1400, new Vector3(70, 36, 70));
   scene.add(dust.points);
+  const scraps = createScraps(150, 64);
+  scene.add(scraps.mesh);
 
   let lastFov = 0;
   let quality: Quality = context.quality;
@@ -286,10 +296,12 @@ export function buildTestingScene(context: BuildContext, data?: unknown): SceneM
         pose.pos[1] + Math.sin(state.time * 0.13 + 1) * 0.16 * sway + state.pointer.y * 0.32,
         pose.pos[2] + dz + Math.cos(state.time * 0.11) * 0.2 * sway,
       );
-      if (Math.abs(pose.fov - lastFov) > 0.001) {
-        camera.fov = pose.fov;
+      // The picture opens a little while the camera is travelling fast: a sense of speed.
+      const fov = pose.fov + Math.min(3, Math.abs(state.speed) * 1.6);
+      if (Math.abs(fov - lastFov) > 0.001) {
+        camera.fov = fov;
         camera.updateProjectionMatrix();
-        lastFov = pose.fov;
+        lastFov = fov;
       }
       camera.lookAt(pose.look[0] + dx, pose.look[1], pose.look[2] + dz);
       built.viewShift = pose.shift;
@@ -300,12 +312,14 @@ export function buildTestingScene(context: BuildContext, data?: unknown): SceneM
       sun.position.set(focus.x + 18, 26, focus.z + 15);
 
       dust.update(camera, state.time, palette.dust, palette.dustOpacity, state.dark > 0.5);
+      scraps.update(camera, state.time);
     },
     setQuality(next) {
       quality = next;
       sorter.setQuality(next);
       sun.castShadow = next === 'high';
-      dust.setCount(next === 'high' ? 2200 : next === 'medium' ? 1400 : 700);
+      dust.setCount(next === 'high' ? 1400 : next === 'medium' ? 900 : 450);
+      scraps.setCount(next === 'high' ? 150 : next === 'medium' ? 100 : 60);
     },
     dispose() {
       sky.dispose();
@@ -316,6 +330,7 @@ export function buildTestingScene(context: BuildContext, data?: unknown): SceneM
       field?.dispose();
       media.dispose();
       dust.dispose();
+      scraps.dispose();
       sun.shadow.map?.dispose();
     },
   };

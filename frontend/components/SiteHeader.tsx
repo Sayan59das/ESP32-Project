@@ -17,15 +17,18 @@ const pages: { id: Page; href: string; label: string }[] = [
   { id: 'project', href: '/project', label: 'Project' },
 ];
 
-/** The brand mark: a tower of bricks with a lens set into it. */
+/** The brand mark: a bin with a lens set into it. */
 function Mark() {
   return (
     <svg className={styles.mark} width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
-      <rect x="4.5" y="20.5" width="21" height="5.5" rx="1.6" fill="currentColor" />
-      <rect x="6.5" y="13.5" width="17" height="5.5" rx="1.6" fill="currentColor" />
-      <rect x="9.5" y="6.5" width="11" height="5.5" rx="1.6" fill="currentColor" />
-      <circle cx="15" cy="16.2" r="2" fill="var(--surface)" />
-      <circle cx="15" cy="16.2" r="1.1" fill="var(--recyclable-mark)" />
+      <rect x="11.5" y="3" width="7" height="3" rx="1.2" fill="currentColor" />
+      <rect x="5.5" y="5.8" width="19" height="3.6" rx="1.5" fill="currentColor" />
+      <path
+        d="M7.6 11 H22.4 L21 25.3 C20.9 26.3 20.1 27 19.1 27 H10.9 C9.9 27 9.1 26.3 9 25.3 Z"
+        fill="currentColor"
+      />
+      <circle cx="15" cy="18.2" r="3.3" fill="var(--surface)" />
+      <circle cx="15" cy="18.2" r="1.9" fill="var(--recyclable-mark)" />
     </svg>
   );
 }

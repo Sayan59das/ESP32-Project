@@ -1,6 +1,6 @@
 // The home story: eight chapters flown through in one continuous world.
 //
-//   0  EcoSort Edge          the Sorter assembles in the mist
+//   0  EcoSort Edge          the Sorter, a bin, assembles in the haze
 //   1  Why we built it       its parts begin to separate
 //   2  How it sees           the lens, and the 160 by 120 frame the model reads
 //   3  Three outcomes        a lane, a scan gate, and three places an item can end up
@@ -25,6 +25,7 @@ import { type Key, poseAt } from '@/lib/scene/rig';
 
 import { createDust } from '../engine/dust';
 import { createPalette, paletteAt } from '../engine/palette';
+import { createScraps } from '../engine/scraps';
 import type { BuildContext, FrameState, Quality, SceneModule } from '../engine/types';
 import { createFrameScreen } from './frames';
 import { createLane } from './lane';
@@ -94,7 +95,14 @@ export function buildHomeScene(context: BuildContext, data?: unknown): SceneModu
   const sky = createSky();
   scene.add(sky.group);
 
-  const terrain = createTerrain(context.quality === 'low' ? 140 : 240);
+  // Where nothing is left lying: the lane and its bins, the pipeline, the way to the towers,
+  // and the Sorter.
+  const keepClear = (x: number, z: number) =>
+    (x > 3 && x < 30 && Math.abs(z) < 8) ||
+    (x < -8 && x > -66 && Math.abs(z) < 8) ||
+    (Math.abs(x) < 16 && z > 18 && z < 80) ||
+    Math.hypot(x, z) < 6;
+  const terrain = createTerrain({ segments: context.quality === 'low' ? 48 : 96, keepClear });
   scene.add(terrain.group);
 
   const sorter = createSorter();
@@ -144,8 +152,10 @@ export function buildHomeScene(context: BuildContext, data?: unknown): SceneModu
   scene.add(sun.target);
   sun.target.position.set(8, 0, 0);
 
-  const dust = createDust(2200, new Vector3(70, 36, 70));
+  const dust = createDust(1400, new Vector3(70, 36, 70));
   scene.add(dust.points);
+  const scraps = createScraps(150, 64);
+  scene.add(scraps.mesh);
 
   let lastFov = 0;
   let quality: Quality = context.quality;
@@ -225,21 +235,25 @@ export function buildHomeScene(context: BuildContext, data?: unknown): SceneModu
         pose.pos[1] + Math.sin(state.time * 0.13 + 1) * 0.16 * sway + state.pointer.y * 0.32,
         pose.pos[2] + Math.cos(state.time * 0.11) * 0.2 * sway,
       );
-      if (Math.abs(pose.fov - lastFov) > 0.001) {
-        camera.fov = pose.fov;
+      // The picture opens a little while the camera is travelling fast: a sense of speed.
+      const fov = pose.fov + Math.min(3, Math.abs(state.speed) * 1.6);
+      if (Math.abs(fov - lastFov) > 0.001) {
+        camera.fov = fov;
         camera.updateProjectionMatrix();
-        lastFov = pose.fov;
+        lastFov = fov;
       }
       camera.lookAt(pose.look[0] + follow, pose.look[1], pose.look[2]);
       world.viewShift = pose.shift;
 
       dust.update(camera, state.time, palette.dust, palette.dustOpacity, state.dark > 0.5);
+      scraps.update(camera, state.time);
     },
     setQuality(next) {
       quality = next;
       sorter.setQuality(next);
       sun.castShadow = next === 'high';
-      dust.setCount(next === 'high' ? 2200 : next === 'medium' ? 1400 : 700);
+      dust.setCount(next === 'high' ? 1400 : next === 'medium' ? 900 : 450);
+      scraps.setCount(next === 'high' ? 150 : next === 'medium' ? 100 : 60);
     },
     dispose() {
       sky.dispose();
@@ -250,6 +264,7 @@ export function buildHomeScene(context: BuildContext, data?: unknown): SceneModu
       pipeline.dispose();
       pylons.dispose();
       dust.dispose();
+      scraps.dispose();
       sun.shadow.map?.dispose();
     },
   };
