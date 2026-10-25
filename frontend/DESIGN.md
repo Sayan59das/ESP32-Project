@@ -162,10 +162,14 @@ simulated data is never shown as real; the three outcomes keep their colours and
 - **Motion.** Default on, off for `prefers-reduced-motion`, and a "Pause animation" button
   remembers the choice. Still mode renders on demand only. `?frame=2.5&time=10&quality=low`
   freezes a chapter for review and tests.
-- **Cost.** Three quality tiers (bloom and shadows only on the top one), a software renderer is
-  forced to the lowest. If frames run slow it draws fewer pixels first, a step at a time, and
-  only then gives up bloom and shadows; it never steps back up. Every shader is compiled and
-  every generated texture uploaded before the first frame, so nothing stalls when a chapter's
-  objects first come into view. Only the home and testing pages load three.js.
+- **Cost.** Three quality tiers. The top one has shadows and a multisampled picture; the middle
+  one has neither (edges are smoothed by one cheap pass instead) but keeps the bloom, which is
+  drawn at half size; the lowest has no bloom. Graphics that share the processor's memory (most
+  laptops) start on the middle tier, because on them multisampling and shadows are what drop
+  frames; a software renderer is forced to the lowest. If one in ten recent frames is slow it
+  steps down: shadows and multisampling first, then fewer pixels a step at a time, then bloom.
+  It never steps back up. Every shader is compiled and every generated texture uploaded before
+  the first frame, so nothing stalls when a chapter's objects first come into view. Only the
+  home and testing pages load three.js.
 - **Contrast.** Small text straight on the world is `--ink` only, checked against the world's
   mist and ground colours (`--scene-mist`, `--scene-ground`, kept in step with the palette).

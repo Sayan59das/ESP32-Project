@@ -4,9 +4,10 @@
 //  - It draws only while the page is visible, and only every frame while motion is on. With
 //    reduced motion (or the pause button) it draws on demand, once per change, and shows
 //    the chapter nearest to where the reader is instead of flying the camera.
-//  - It picks a quality tier for the machine (bloom and shadows only where they are
-//    affordable), watches its own frame time, and when it cannot keep up it first draws
-//    fewer pixels, a little at a time, and only then gives up bloom and shadows.
+//  - It picks a quality tier for the machine (shadows and multisampling only on a graphics
+//    card with room for them, bloom on all but the lowest), watches its own frame time, and
+//    when it cannot keep up it gives up shadows and multisampling first, then draws fewer
+//    pixels, a little at a time, and last gives up bloom.
 //  - It compiles every shader and uploads every generated texture before the first frame, so
 //    nothing stalls the picture the first time a chapter's objects come into view.
 //  - The story's position is a critically damped spring: a wheel's steps, a dragged scrollbar
@@ -33,7 +34,9 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 
 import { chapterPosition, currentChapter, type Span } from '@/lib/scene/chapters';
 import { type Box, chooseLean, labelBox } from '@/lib/scene/labels';
@@ -61,8 +64,13 @@ export interface StageOptions {
 }
 
 const INTRO_SECONDS = 3.6;
-/** A frame slower than this, about 45 per second, counts against the picture's resolution. */
+/** A frame slower than this, about 45 per second, is a slow one. */
 const SLOW_FRAME = 1 / 45;
+/** The slow frames, out of the last WINDOW, that make the picture cheaper. */
+const WINDOW = 90;
+const TOO_MANY_SLOW = 8;
+/** Bloom is a blur, so it is drawn on a smaller picture than the scene. */
+const BLOOM_SCALE = 0.5;
 /** The least share of its pixels the picture is drawn with before a quality tier is given up. */
 const LOWEST_SCALE = 0.62;
 /** How long the camera takes to settle on where the reader is, and its top speed. */
@@ -71,18 +79,34 @@ const TOP_SPEED = 2.4;
 /** The longest the first compile may hold the picture back before it is drawn anyway. */
 const WARM_LIMIT_MS = 5000;
 
-function softwareRenderer(gl: WebGLRenderingContext | WebGL2RenderingContext): boolean {
+function gpuName(gl: WebGLRenderingContext | WebGL2RenderingContext): string {
   const info = gl.getExtension('WEBGL_debug_renderer_info');
-  const name = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+  return info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+}
+
+function softwareRenderer(name: string): boolean {
   return /swiftshader|llvmpipe|softpipe|software/i.test(name);
 }
 
-function firstQuality(forced: Quality | null | undefined, software: boolean): Quality {
+/**
+ * Graphics that share the processor's memory (most laptops) or sit in a phone. Multisampling a
+ * floating-point picture and a shadow map both cost them more than a frame has to give, so they
+ * start on the middle tier.
+ */
+function sharedGraphics(name: string): boolean {
+  return (/intel/i.test(name) && !/arc/i.test(name)) || /mali|adreno|powervr|videocore/i.test(name);
+}
+
+function firstQuality(
+  forced: Quality | null | undefined,
+  software: boolean,
+  name: string,
+): Quality {
   if (forced) return forced;
   if (software) return 'low';
   const nav = navigator as Navigator & { deviceMemory?: number };
   if ((nav.hardwareConcurrency ?? 8) <= 4 || (nav.deviceMemory ?? 8) <= 4) return 'medium';
-  return 'high';
+  return sharedGraphics(name) ? 'medium' : 'high';
 }
 
 function readDark(): number {
@@ -123,8 +147,9 @@ export function createStage(options: StageOptions): StageHandle | null {
   }
 
   const gl = renderer.getContext();
-  const software = softwareRenderer(gl);
-  let quality = firstQuality(options.quality, software);
+  const name = gpuName(gl);
+  const software = softwareRenderer(name);
+  let quality = firstQuality(options.quality, software, name);
 
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
@@ -136,7 +161,8 @@ export function createStage(options: StageOptions): StageHandle | null {
   pmrem.dispose();
 
   let dirty = true;
-  const invalidate = () => {
+  const invalidate = (loaded?: Texture) => {
+    if (loaded) renderer.initTexture(loaded);
     dirty = true;
   };
 
@@ -148,6 +174,7 @@ export function createStage(options: StageOptions): StageHandle | null {
   let pixelRatio = 1;
   let composer: EffectComposer | null = null;
   let bloomPass: UnrealBloomPass | null = null;
+  let edgePass: ShaderPass | null = null;
 
   /** Share of the full resolution in use. It only ever goes down, a step at a time. */
   let scale = 1;
@@ -165,11 +192,14 @@ export function createStage(options: StageOptions): StageHandle | null {
     composer?.dispose();
     composer = null;
     bloomPass = null;
+    edgePass = null;
     if (quality === 'low') return;
-    // Fewer samples when there are already many pixels: the edges are fine at that density.
+    // Only the top tier multisamples the picture (and with fewer samples when there are already
+    // many pixels). The middle tier smooths the edges with one cheap pass at the end instead.
+    const samples = quality === 'high' ? (pixelRatio >= 1.4 ? 2 : 4) : 0;
     const target = new WebGLRenderTarget(width * pixelRatio, height * pixelRatio, {
       type: HalfFloatType,
-      samples: quality === 'high' ? (pixelRatio >= 1.4 ? 2 : 4) : 0,
+      samples,
     });
     composer = new EffectComposer(renderer, target);
     composer.addPass(new RenderPass(mod.scene, mod.camera));
@@ -181,8 +211,22 @@ export function createStage(options: StageOptions): StageHandle | null {
     );
     composer.addPass(bloomPass);
     composer.addPass(new OutputPass());
+    if (samples === 0) {
+      edgePass = new ShaderPass(FXAAShader);
+      composer.addPass(edgePass);
+    }
+    sizeComposer();
+  }
+
+  function sizeComposer() {
+    if (!composer) return;
     composer.setPixelRatio(pixelRatio);
     composer.setSize(width, height);
+    bloomPass?.setSize(width * pixelRatio * BLOOM_SCALE, height * pixelRatio * BLOOM_SCALE);
+    edgePass?.material.uniforms.resolution?.value.set(
+      1 / (width * pixelRatio),
+      1 / (height * pixelRatio),
+    );
   }
 
   function applyQuality(next: Quality) {
@@ -203,8 +247,7 @@ export function createStage(options: StageOptions): StageHandle | null {
     pixelRatio = chooseRatio();
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(width, height, false);
-    composer?.setPixelRatio(pixelRatio);
-    composer?.setSize(width, height);
+    sizeComposer();
     mod.camera.aspect = width / height;
     shiftApplied = Number.NaN; // force the view offset to be set again
     invalidate();
@@ -361,7 +404,10 @@ export function createStage(options: StageOptions): StageHandle | null {
   let intro = motion ? 0 : 1;
   let introChecked = false;
   let shiftApplied = Number.NaN;
-  let slowFrames = 0;
+  const recent = new Uint8Array(WINDOW);
+  let cursor = 0;
+  let slowCount = 0;
+  let cooldown = 0;
   let framesSeen = 0;
   let renderedChapter = Number.NaN;
 
@@ -470,7 +516,8 @@ export function createStage(options: StageOptions): StageHandle | null {
     renderer.toneMappingExposure = mod.exposure;
     if (bloomPass) {
       bloomPass.strength = mod.bloom.strength;
-      bloomPass.radius = mod.bloom.radius;
+      // Drawn at half size the same radius reaches twice as far across the picture.
+      bloomPass.radius = mod.bloom.radius * BLOOM_SCALE;
       bloomPass.threshold = mod.bloom.threshold;
     }
     const started = performance.now();
@@ -480,23 +527,30 @@ export function createStage(options: StageOptions): StageHandle | null {
 
     if (container.dataset.ready !== 'true') container.dataset.ready = 'true';
 
-    // When the machine cannot keep up, draw fewer pixels first (a little at a time, which is
-    // hardly seen), and give up bloom and shadows only when that is not enough. Never back up:
-    // no flapping.
+    // When the machine cannot keep up, make the picture cheaper: first give up shadows and
+    // multisampling (the largest costs, and hardly missed), then draw fewer pixels, a step at
+    // a time, and last give up bloom. A few slow frames are no reason; a tenth of them is.
+    // Never back up: no flapping.
     if (animate && options.quality == null) {
       framesSeen++;
       if (framesSeen > 40) {
-        slowFrames =
-          elapsed > SLOW_FRAME || performance.now() - started > 20
-            ? slowFrames + 1
-            : Math.max(0, slowFrames - 2);
-        if (slowFrames > 45) {
-          slowFrames = 0;
-          if (!software && scale > LOWEST_SCALE) {
+        const slow = elapsed > SLOW_FRAME || performance.now() - started > 20 ? 1 : 0;
+        slowCount += slow - (recent[cursor] as number);
+        recent[cursor] = slow;
+        cursor = (cursor + 1) % WINDOW;
+        if (cooldown > 0) {
+          cooldown--;
+        } else if (slowCount >= TOO_MANY_SLOW) {
+          recent.fill(0);
+          slowCount = 0;
+          cooldown = WINDOW;
+          if (quality === 'high') {
+            applyQuality('medium');
+          } else if (!software && scale > LOWEST_SCALE) {
             scale = Math.max(LOWEST_SCALE, scale * 0.85);
             resize();
           } else if (quality !== 'low') {
-            applyQuality(quality === 'high' ? 'medium' : 'low');
+            applyQuality('low');
           }
         }
       }

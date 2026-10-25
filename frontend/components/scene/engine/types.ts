@@ -29,8 +29,12 @@ export interface BuildContext {
   quality: Quality;
   /** Reflections for glass and metal, made from a generated room: no image is downloaded. */
   environment: Texture | null;
-  /** Ask for the next frame to be drawn, for a still view when something finished loading. */
-  invalidate: () => void;
+  /**
+   * Ask for the next frame to be drawn, for a still view when something finished loading. Pass it
+   * as a texture loader's callback and the texture is also put on the GPU at once, not when it
+   * first comes into view.
+   */
+  invalidate: (loaded?: Texture) => void;
 }
 
 /** A scene the engine can run. */
